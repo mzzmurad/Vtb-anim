@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="az">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VTB Cash Loan · 10s Vertical</title>
+<style>
+  @font-face { font-family: "Inter Tight"; font-weight: 600; src: url(fonts/inter-tight-latin-600-normal.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Inter Tight"; font-weight: 600; src: url(fonts/inter-tight-latin-ext-600-normal.woff2) format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Inter Tight"; font-weight: 800; src: url(fonts/inter-tight-latin-800-normal.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Inter Tight"; font-weight: 800; src: url(fonts/inter-tight-latin-ext-800-normal.woff2) format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+
+  :root { --bg: #0d1117; --fg: #e6edf3; --muted: #8b949e; --line: #30363d; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 14px/1.4 "Inter Tight", system-ui, sans-serif; }
+  body.render { background: #000; }
+  .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; box-sizing: border-box; }
+  canvas { height: min(80vh, 1920px); max-width: calc(100vw - 32px); aspect-ratio: 9 / 16; background: #F5F8FC; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  body.render canvas { height: auto; width: 1080px; border-radius: 0; box-shadow: none; }
+  body.render .ui, body.render .wrap > :not(canvas) { display: none; }
+  body.render .wrap { padding: 0; display: block; }
+  .ui { display: flex; gap: 10px; align-items: center; width: min(560px, 100%); }
+  .ui button { background: #21262d; color: var(--fg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: inherit; cursor: pointer; }
+  .ui input[type=range] { flex: 1; }
+  .ui label { color: var(--muted); white-space: nowrap; }
+  #tc { font-variant-numeric: tabular-nums; min-width: 92px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="c" width="1080" height="1920"></canvas>
+  <div class="ui">
+    <button id="play">Pause</button>
+    <input id="scrub" type="range" min="0" max="299" value="0">
+    <span id="tc">f000 · 0.00s</span>
+    <label><input id="safe" type="checkbox"> safe area</label>
+  </div>
+</div>
+<script>
+"use strict";
+/* ============================================================
+   VTB Bank — Cash loan · 10 s vertical (1080×1920, 30 fps, 300 frames)
+   Everything is drawn from frame number f, so any frame renders
+   deterministically (used by render.mjs for the master).
+   ============================================================ */
+
+const W = 1080, H = 1920, FPS = 30, FRAMES = 300;
+
+// ---- Palette (approximations — replace with brandbook values) ----
+const C = {
+  navy: "#0A2973", azure: "#009FDF", ice: "#E6F4FB",
+  canvas: "#F5F8FC", white: "#FFFFFF", gold: "#F2B544",
+};
+
+// ---- Copy (DRAFT — provisional, based on the 4 Sep 2026 vtb.az campaign; confirm with VTB) ----
+const COPY = {
+  audience:    "Hər kəs üçün",                 // slot 1 · audience line
+  rate:        "9,9",                          // slot 2 · rate
+  rateSuffix:  "-dən",
+  rateLabel:   "İllik faiz",
+  lockup:      ["KOMİSSİYASIZ", "KREDİT"],     // slot 3 · two-word lockup (caps typed by hand)
+  amount:      "100 000",                      // slot 4 · amount
+  amountLabel: ["AZN-dək", "nağd kredit"],
+  headline:    ["Arzuların", "daha yaxındır"], // slot 5 · headline
+  benefit:     "0%",
+  benefitLabel:"komissiya",
+  logo:        "VTB",                          // wordmark stand-in until the logo sting is supplied
+  tagline:     ["Birlikdə hər şey", "alınacaq"], // slot 6 · tagline (to confirm)
+  cta:         "vtb.az · 986",                 // slot 7 · call to action
+  legal:       "Kredit illik 9,9%-dən, 59 aya qədər, 0% komissiya ilə verilir. " +
+               "Ətraflı şərtlər vtb.az saytında və 986 məlumat mərkəzində. " +
+               "[Yekun hüquqi mətn VTB tərəfindən təqdim olunacaq]",
+};
+
+// ---- Optional real footage: drop footage/work.jpg and footage/portrait.jpg (9:16) ----
+const FOOTAGE_SRC = { work: "footage/work.jpg", portrait: "footage/portrait.jpg" };
+
+/* ---------------- easing ---------------- */
+function cubicBezier(x1, y1, x2, y2) {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const sx = t => ((ax * t + bx) * t + cx) * t;
+  const sy = t => ((ay * t + by) * t + cy) * t;
+  const dx = t => (3 * ax * t + 2 * bx) * t + cx;
+  return x => {
+    if (x <= 0) return 0; if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 8; i++) { const e = sx(t) - x; const d = dx(t); if (Math.abs(e) < 1e-7) return sy(t); if (Math.abs(d) < 1e-6) break; t -= e / d; }
+    let lo = 0, hi = 1; t = x;
+    for (let i = 0; i < 40; i++) { const v = sx(t); if (Math.abs(v - x) < 1e-7) break; if (v < x) lo = t; else hi = t; t = (lo + hi) / 2; }
+    return sy(t);
+  };
+}
+const easeOut   = cubicBezier(0.16, 1, 0.3, 1);   // every entrance
+const easeIn    = cubicBezier(0.7, 0, 0.84, 0);   // exits, 8–10 f
+const easeInOut = cubicBezier(0.65, 0, 0.35, 1);  // camera moves, 15 f
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const prog = (f, start, dur) => clamp((f - start) / dur);
+// pop: 85% → 103% → 100% over 10 frames (one overshoot only)
+function pop(f, start) {
+  const t = f - start;
+  if (t < 0) return 0;
+  if (t < 6) return lerp(0.85, 1.03, easeOut(t / 6));
+  if (t < 10) return lerp(1.03, 1, easeOut((t - 6) / 4));
+  return 1;
+}
+
+/* ---------------- canvas helpers ---------------- */
+const cv = document.getElementById("c");
+const out = cv.getContext("2d");
+const buf = document.createElement("canvas"); buf.width = W; buf.height = H;
+const ctx = buf.getContext("2d");
+
+function mk(w, h) { const c = document.createElement("canvas"); c.width = Math.ceil(w); c.height = Math.ceil(h); return c; }
+function font(ctx, size, weight = 800, trackPct = 0) {
+  ctx.font = `${weight} ${size}px "Inter Tight"`;
+  ctx.letterSpacing = `${(size * trackPct).toFixed(2)}px`;
+}
+function rr(ctx, x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, w / 2, h / 2));
+  ctx.beginPath(); ctx.roundRect(x, y, w, h, r);
+}
+function shadowOn(ctx, s = 1) {
+  ctx.shadowColor = "rgba(10,41,115,0.08)"; ctx.shadowBlur = 40 * s; ctx.shadowOffsetY = 16 * s; ctx.shadowOffsetX = 0;
+}
+function shadowOff(ctx) { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; }
+
+// Mask wipe up from the baseline, 8 frames per line.
+function wipeText(ctx, text, x, y, size, color, p, { weight = 800, track = -0.02, align = "left" } = {}) {
+  if (p <= 0) return;
+  ctx.save();
+  font(ctx, size, weight, track);
+  ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+  const w = ctx.measureText(text).width + size;
+  const left = align === "center" ? x - w / 2 : align === "right" ? x - w : x - size * 0.2;
+  ctx.beginPath(); ctx.rect(left, y - size * 1.05, w + size * 0.4, size * 1.35); ctx.clip();
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y + (1 - easeOut(p)) * size * 1.3);
+  ctx.restore();
+}
+
+/* ---------------- footage (placeholder or supplied stills) ---------------- */
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function paintPlaceholder(kind) {
+  const c = mk(W, H), g = c.getContext("2d");
+  // cool daylight room
+  let gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, "#C9D9E6"); gr.addColorStop(0.55, "#E4ECF2"); gr.addColorStop(1, "#D5DDE4");
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  g.save(); g.filter = "blur(36px)";
+  g.fillStyle = "rgba(255,255,255,0.85)"; g.fillRect(-60, 180, 520, 900);          // window light
+  g.fillStyle = "rgba(255,255,255,0.55)"; g.fillRect(560, 120, 300, 520);
+  g.fillStyle = "rgba(110,150,120,0.55)"; g.beginPath(); g.arc(930, 820, 170, 0, 7); g.fill(); // plant
+  g.fillStyle = "rgba(90,120,150,0.35)"; g.fillRect(0, 1180, W, 40);                 // shelf line
+  g.restore();
+
+  const skin = (cx, cy, r) => { const s = g.createRadialGradient(cx - r * .35, cy - r * .4, r * .1, cx, cy, r * 1.05); s.addColorStop(0, "#EDC3A4"); s.addColorStop(1, "#C68C6B"); return s; };
+  const shirt = (y0, y1) => { const s = g.createLinearGradient(0, y0, 0, y1); s.addColorStop(0, "#4A6A8F"); s.addColorStop(1, "#2E4A6B"); return s; };
+
+  if (kind === "work") {
+    const cx = 610, hy = 820;
+    g.fillStyle = "#C79B80"; g.fillRect(cx - 55, hy + 110, 110, 120);                 // neck
+    g.fillStyle = shirt(1000, 1700); g.beginPath();                                    // torso
+    g.moveTo(cx - 330, 1700); g.bezierCurveTo(cx - 330, 1180, cx - 260, 1030, cx - 90, 1000);
+    g.lineTo(cx + 90, 1000); g.bezierCurveTo(cx + 260, 1030, cx + 330, 1180, cx + 330, 1700); g.fill();
+    g.strokeStyle = "#3C5A7E"; g.lineWidth = 120; g.lineCap = "round";                 // arm to laptop
+    g.beginPath(); g.moveTo(cx - 250, 1150); g.quadraticCurveTo(cx - 330, 1420, cx - 170, 1500); g.stroke();
+    g.fillStyle = skin(cx, hy, 150); g.beginPath(); g.ellipse(cx, hy, 135, 160, 0, 0, 7); g.fill(); // head
+    g.fillStyle = "#3A2B24"; g.beginPath(); g.ellipse(cx, hy - 70, 145, 105, 0, Math.PI, 0); g.fill(); // hair
+    // desk + laptop (lid toward camera)
+    let d = g.createLinearGradient(0, 1480, 0, H); d.addColorStop(0, "#E2D6C8"); d.addColorStop(1, "#C9B9A6");
+    g.fillStyle = d; g.fillRect(0, 1480, W, H - 1480);
+    g.fillStyle = "#A9B4BF"; rr(g, 150, 1180, 430, 320, 22); g.fill();
+    g.fillStyle = "rgba(255,255,255,0.35)"; rr(g, 150, 1180, 430, 30, 14); g.fill();
+    g.fillStyle = "#8D99A5"; g.fillRect(120, 1490, 490, 26);
+    g.fillStyle = "#F4F1EC"; rr(g, 700, 1530, 180, 120, 18); g.fill();               // mug
+  } else {
+    const cx = 540, hy = 760;
+    g.fillStyle = "#C79B80"; g.fillRect(cx - 58, hy + 110, 116, 130);
+    g.fillStyle = shirt(950, H); g.beginPath();
+    g.moveTo(cx - 400, H); g.bezierCurveTo(cx - 400, 1160, cx - 300, 980, cx - 100, 950);
+    g.lineTo(cx + 100, 950); g.bezierCurveTo(cx + 300, 980, cx + 400, 1160, cx + 400, H); g.fill();
+    g.fillStyle = "#2C4666"; rr(g, cx - 360, 1260, 720, 190, 95); g.fill();           // crossed arms
+    g.fillStyle = "#3D5D82"; rr(g, cx - 330, 1300, 500, 150, 75); g.fill();
+    g.fillStyle = "#D7A584"; g.beginPath(); g.arc(cx + 250, 1330, 52, 0, 7); g.fill(); g.beginPath(); g.arc(cx - 230, 1395, 50, 0, 7); g.fill();
+    g.fillStyle = skin(cx, hy, 150); g.beginPath(); g.ellipse(cx, hy, 140, 165, 0, 0, 7); g.fill();
+    g.fillStyle = "#3A2B24"; g.beginPath(); g.ellipse(cx, hy - 72, 150, 108, 0, Math.PI, 0); g.fill();
+  }
+  // warm grade on skin is kept; add grain + vignette
+  const r = rng(kind === "work" ? 7 : 11), img = g.getImageData(0, 0, W, H), px = img.data;
+  for (let i = 0; i < px.length; i += 4) { const n = (r() - 0.5) * 14; px[i] += n; px[i + 1] += n; px[i + 2] += n; }
+  g.putImageData(img, 0, 0);
+  const v = g.createRadialGradient(W / 2, H * 0.45, H * 0.3, W / 2, H * 0.45, H * 0.75);
+  v.addColorStop(0, "rgba(10,30,60,0)"); v.addColorStop(1, "rgba(10,30,60,0.18)");
+  g.fillStyle = v; g.fillRect(0, 0, W, H);
+  // placeholder tag
+  font(g, 26, 600, 0.02); g.fillStyle = "rgba(10,41,115,0.55)"; g.textAlign = "center";
+  g.fillText(kind === "work" ? "PLACEHOLDER · working shot" : "PLACEHOLDER · portrait", W / 2, kind === "work" ? 1140 : 1720);
+  return c;
+}
+
+const FOOTAGE = {};
+function loadImg(src) { return new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+
+// cover-fit footage into rect with zoom and focal point
+function drawFootage(ctx, kind, x, y, w, h, r, zoom = 1, focal = [0.5, 0.42]) {
+  const img = FOOTAGE[kind];
+  const iw = img.width, ih = img.height;
+  const s = Math.max(w / iw, h / ih) * zoom;
+  const dw = iw * s, dh = ih * s;
+  const dx = x + w / 2 - dw * focal[0] + (dw * focal[0] - dw / 2) * (1 - Math.min(1, (dw - w) / dw * 4)) * 0;
+  let ox = x + w * 0.5 - dw * focal[0], oy = y + h * 0.5 - dh * focal[1];
+  ox = Math.min(x, Math.max(x + w - dw, ox)); oy = Math.min(y, Math.max(y + h - dh, oy));
+  ctx.save(); rr(ctx, x, y, w, h, r); ctx.clip();
+  ctx.drawImage(img, ox, oy, dw, dh);
+  ctx.restore();
+  void dx;
+}
+
+/* ---------------- 3D glyph sprites (glossy soft plastic, light from top-left) ---------------- */
+const spriteCache = new Map();
+function glyphSprite(ch, size) {
+  const key = ch + "|" + size;
+  if (spriteCache.has(key)) return spriteCache.get(key);
+  const t = mk(10, 10).getContext("2d"); font(t, size, 800, 0);
+  const adv = t.measureText(ch).width;
+  const depth = Math.round(size * 0.075), pad = Math.ceil(size * 0.12);
+  const w = adv + depth + pad * 2, h = size * 1.05 + depth + pad * 2;
+  const c = mk(w, h), g = c.getContext("2d");
+  const ox = pad, oy = pad + size * 0.86;
+  font(g, size, 800, 0); g.textBaseline = "alphabetic";
+  // extrusion (azure depth)
+  for (let i = depth; i >= 1; i--) {
+    const k = i / depth;
+    g.fillStyle = `rgb(${Math.round(lerp(40, 0, k))},${Math.round(lerp(176, 104, k))},${Math.round(lerp(236, 170, k))})`;
+    g.fillText(ch, ox + i * 0.42, oy + i);
+  }
+  // face
+  const f = mk(w, h), fg = f.getContext("2d");
+  font(fg, size, 800, 0); fg.textBaseline = "alphabetic";
+  let gr = fg.createLinearGradient(0, oy - size * 0.75, 0, oy);
+  gr.addColorStop(0, "#FFFFFF"); gr.addColorStop(1, "#DDEFFA");
+  fg.fillStyle = gr; fg.fillText(ch, ox, oy);
+  fg.globalCompositeOperation = "source-atop";
+  const hl = fg.createRadialGradient(ox + adv * 0.25, oy - size * 0.68, 0, ox + adv * 0.25, oy - size * 0.68, size * 0.55);
+  hl.addColorStop(0, "rgba(255,255,255,1)"); hl.addColorStop(1, "rgba(255,255,255,0)");
+  fg.fillStyle = hl; fg.fillRect(0, 0, w, h);
+  const sh = fg.createLinearGradient(0, oy - size * 0.2, 0, oy + 2);
+  sh.addColorStop(0, "rgba(0,159,223,0)"); sh.addColorStop(1, "rgba(0,159,223,0.22)");
+  fg.fillStyle = sh; fg.fillRect(0, 0, w, h);
+  g.drawImage(f, 0, 0);
+  // thin rim light on the top-left edges
+  g.save(); g.globalCompositeOperation = "source-atop"; g.restore();
+  const s = { canvas: c, ox, oy, adv, depth };
+  spriteCache.set(key, s);
+  return s;
+}
+// layout a 3D string: returns [{ch, x}] and width (tracking −4%)
+function layout3D(text, size) {
+  const items = []; let x = 0; const tr = -0.04 * size;
+  for (const ch of text) {
+    if (ch === " ") { x += size * 0.2; continue; }
+    const s = glyphSprite(ch, size); items.push({ ch, x, s }); x += s.adv + tr;
+  }
+  return { items, width: x - tr };
+}
+function drawSprite(ctx, s, x, baseline, sx = 1, sy = 1, alpha = 1) {
+  // anchored at baseline-center of the glyph
+  ctx.save(); ctx.globalAlpha *= alpha;
+  ctx.translate(x + s.adv / 2, baseline); ctx.scale(sx, sy);
+  ctx.drawImage(s.canvas, -s.adv / 2 - s.ox, -s.oy);
+  ctx.restore();
+}
+
+/* ---------------- manat coin ---------------- */
+function drawCoin(ctx, cx, cy, r, rot, lean, gleam) {
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(lean);
+  // soft contact shadow
+  ctx.save(); ctx.filter = `blur(${r * 0.12}px)`; ctx.fillStyle = "rgba(10,41,115,0.18)";
+  ctx.beginPath(); ctx.ellipse(r * 0.1, r * 0.98, r * 0.75, r * 0.12, 0, 0, 7); ctx.fill(); ctx.restore();
+  // edge (thickness), fixed toward bottom-right
+  let e = ctx.createLinearGradient(-r, -r, r, r); e.addColorStop(0, "#D99A2B"); e.addColorStop(1, "#A86E12");
+  ctx.fillStyle = e; ctx.beginPath(); ctx.arc(r * 0.07, r * 0.09, r, 0, 7); ctx.fill();
+  // face
+  let fc = ctx.createRadialGradient(-r * 0.4, -r * 0.45, r * 0.05, 0, 0, r * 1.05);
+  fc.addColorStop(0, "#FFE7AE"); fc.addColorStop(0.45, C.gold); fc.addColorStop(1, "#D2922A");
+  ctx.fillStyle = fc; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+  ctx.lineWidth = r * 0.05; ctx.strokeStyle = "rgba(255,240,200,0.55)"; ctx.beginPath(); ctx.arc(0, 0, r * 0.82, 0, 7); ctx.stroke();
+  ctx.lineWidth = r * 0.025; ctx.strokeStyle = "rgba(160,100,10,0.35)"; ctx.beginPath(); ctx.arc(0, 0, r * 0.86, 0, 7); ctx.stroke();
+  // manat sign ₼ (embossed), spins with the roll
+  ctx.save(); ctx.rotate(rot);
+  const sign = (dx, dy, col) => {
+    ctx.strokeStyle = col; ctx.lineWidth = r * 0.12; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath(); ctx.moveTo(-r * 0.38 + dx, r * 0.42 + dy);
+    ctx.lineTo(-r * 0.38 + dx, r * 0.08 + dy); ctx.arc(dx, r * 0.08 + dy, r * 0.38, Math.PI, 0); ctx.lineTo(r * 0.38 + dx, r * 0.42 + dy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(dx, -r * 0.5 + dy); ctx.lineTo(dx, r * 0.42 + dy); ctx.stroke();
+  };
+  sign(-r * 0.025, -r * 0.025, "rgba(255,245,215,0.85)");
+  sign(r * 0.02, r * 0.02, "rgba(150,92,8,0.55)");
+  sign(0, 0, "#D9982C");
+  ctx.restore();
+  // gleam
+  if (gleam > 0 && gleam < 1) {
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.clip(); ctx.rotate(-0.6);
+    const gx = lerp(-r * 1.6, r * 1.6, easeInOut(gleam));
+    const gg = ctx.createLinearGradient(gx - r * 0.3, 0, gx + r * 0.3, 0);
+    gg.addColorStop(0, "rgba(255,255,255,0)"); gg.addColorStop(0.5, "rgba(255,255,255,0.75)"); gg.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = gg; ctx.fillRect(-r * 2, -r * 2, r * 4, r * 4); ctx.restore();
+  }
+  ctx.restore();
+}
+
+/* ---------------- checkbox ---------------- */
+function drawCheck(ctx, x, y, f, tickAt, onDark) {
+  const S = 40, p = prog(f, tickAt, 6), sc = f >= tickAt ? pop(f, tickAt) : 1;
+  ctx.save(); ctx.translate(x + S / 2, y + S / 2); ctx.scale(sc, sc); ctx.translate(-S / 2, -S / 2);
+  rr(ctx, 0, 0, S, S, 12);
+  if (f < tickAt) {
+    ctx.fillStyle = onDark ? "rgba(255,255,255,0.18)" : "#FFFFFF"; ctx.fill();
+    ctx.lineWidth = 2.5; ctx.strokeStyle = onDark ? "rgba(255,255,255,0.65)" : "#C5D4E6"; ctx.stroke();
+  } else {
+    ctx.fillStyle = onDark === "azure" ? "#FFFFFF" : C.azure; ctx.fill();
+    ctx.strokeStyle = onDark === "azure" ? C.azure : "#FFFFFF"; ctx.lineWidth = 4.5; ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const L = 34; ctx.setLineDash([L * easeOut(p), 100]);
+    ctx.beginPath(); ctx.moveTo(10, 21); ctx.lineTo(17, 28); ctx.lineTo(30, 13); ctx.stroke(); ctx.setLineDash([]);
+  }
+  ctx.restore();
+}
+
+/* ============================================================
+   LAYOUT (1080×1920; 64 px margins; safe text area y 250–1520)
+   ============================================================ */
+const CARD = { x: 64, y: 64, w: 952, h: 720 };          // scene 2 footage card (~top 41%)
+const PILL = { x: 64, y: 816, h: 72 };
+const RATE = { x: 64, y: 920, w: 952, h: 380 };
+const LOCK_Y = [1412, 1512], LOCK_SIZE = 100;
+const TW = 460, TH = 480;                               // grid tile size (32 px gaps)
+const TILES = {
+  t1: { x: 64,  y: 508,  w: TW, h: TH },                // portrait
+  t2: { x: 556, y: 508,  w: TW, h: TH },                // rate (azure)
+  t3: { x: 64,  y: 1020, w: TW, h: TH },                // amount (white)
+  t4: { x: 556, y: 1020, w: TW, h: TH },                // benefit (navy)
+};
+const HEAD_Y = [352, 462], HEAD_SIZE = 104;
+const AMOUNT_CENTER = [540, 885];                       // scene 3 content centre (safe-area centre)
+const AMOUNT_TILE_SCALE = 0.4;
+
+/* ---------------- scene 1–2: person → offer ---------------- */
+function footageRect(f) {
+  const p = easeOut(prog(f, 45, 15));
+  return { x: lerp(0, CARD.x, p), y: lerp(0, CARD.y, p), w: lerp(W, CARD.w, p), h: lerp(H, CARD.h, p), r: lerp(0, 48, p) };
+}
+
+function drawRateBlock(ctx, f, x, y, w, h, dy) {
+  // azure tile growing down from the pill (f68, 10 f)
+  const g = easeOut(prog(f, 68, 10));
+  if (g <= 0) return;
+  const th = h * g;
+  ctx.save(); shadowOn(ctx); ctx.fillStyle = C.azure; rr(ctx, x, y + dy, w, th, 48); ctx.fill(); shadowOff(ctx);
+  rr(ctx, x, y + dy, w, th, 48); ctx.clip();
+
+  // fit numerals + chip into the tile
+  let size = 330;
+  font(ctx, size, 800, -0.04);
+  const chipSize = 46;
+  const measure = s => { font(ctx, s, 800, -0.04); return ctx.measureText(COPY.rate + "%").width; };
+  font(ctx, chipSize, 800, -0.02); const chipW = ctx.measureText(COPY.rateSuffix).width + 52;
+  while (measure(size) + chipW + 20 > w - 112) size -= 4;
+  const cap = size * 0.727, base = y + dy + h / 2 + cap / 2;
+  const x0 = x + 56;
+  font(ctx, size, 800, -0.04); ctx.fillStyle = "#FFFFFF"; ctx.textBaseline = "alphabetic";
+  // odometer roll f74–96, 3 f stagger per column
+  const band = [base - size * 0.84, base + size * 0.14];
+  let cx = x0, col = 0;
+  const tr = -0.04 * size;
+  for (const ch of COPY.rate) {
+    const aw = ctx.measureText(ch).width; ctx.letterSpacing = "0px";
+    const awNoTrack = ctx.measureText(ch).width; ctx.letterSpacing = `${tr}px`;
+    if (/\d/.test(ch)) {
+      const start = 74 + col * 3, dur = 19;
+      const t = easeOut(prog(f, start, dur));
+      if (f >= start) {
+        const target = +ch, v = t * (10 + target), i = Math.floor(v), fr = v - i;
+        ctx.save(); ctx.beginPath(); ctx.rect(cx - 10, band[0], awNoTrack + 20, band[1] - band[0]); ctx.clip();
+        ctx.letterSpacing = "0px";
+        const lh = size * 1.0;
+        ctx.fillText(String(i % 10), cx, base - fr * lh);
+        if (fr > 0.001) ctx.fillText(String((i + 1) % 10), cx, base + (1 - fr) * lh);
+        ctx.restore();
+      }
+      col++;
+    } else {
+      // comma rises with the first column
+      const p = prog(f, 76, 8);
+      if (p > 0) { ctx.save(); ctx.beginPath(); ctx.rect(cx - 10, band[0], awNoTrack + 20, band[1] - band[0]); ctx.clip(); ctx.letterSpacing = "0px"; ctx.fillText(ch, cx, base + (1 - easeOut(p)) * size); ctx.restore(); }
+    }
+    cx += awNoTrack + tr; void aw;
+  }
+  // % slides in at f90
+  const pp = prog(f, 90, 8);
+  if (pp > 0) {
+    ctx.save(); ctx.letterSpacing = "0px"; const pw = ctx.measureText("%").width;
+    ctx.beginPath(); ctx.rect(cx - 4, band[0], pw + 40, band[1] - band[0]); ctx.clip();
+    ctx.fillText("%", cx - (1 - easeOut(pp)) * (pw + 20), base); ctx.restore();
+    // "-dən" chip pops at f96, sits top-right of the %
+    const s = pop(f, 96);
+    if (s > 0) {
+      const chx = cx + pw + 18, chy = base - cap;
+      ctx.save(); ctx.translate(chx + chipW / 2, chy + 40); ctx.scale(s, s);
+      ctx.fillStyle = "#FFFFFF"; rr(ctx, -chipW / 2, -40, chipW, 80, 40); ctx.fill();
+      font(ctx, chipSize, 800, -0.02); ctx.fillStyle = C.navy; ctx.textAlign = "center"; ctx.fillText(COPY.rateSuffix, 0, 16);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+function drawScene12(ctx, f, dy) {
+  // footage: slow push-in 103% → 108% over 0–60, keeps creeping
+  const zoom = 1.03 + 0.05 * Math.min(f, 60) / 60 + 0.0004 * Math.max(0, f - 60);
+  const r = footageRect(f);
+  if (f >= 45) { ctx.save(); shadowOn(ctx); ctx.fillStyle = "#fff"; rr(ctx, r.x, r.y + dy, r.w, r.h, r.r); ctx.fill(); ctx.restore(); }
+  drawFootage(ctx, "work", r.x, r.y + dy, r.w, r.h, r.r, zoom, [0.5, 0.5]);
+  if (f < 60) return;
+
+  // pill pops at f62
+  const ps = pop(f, 62);
+  if (ps > 0) {
+    font(ctx, 36, 600, 0); const tw = ctx.measureText(COPY.audience).width, pw = tw + 64;
+    ctx.save(); ctx.translate(PILL.x + pw / 2, PILL.y + PILL.h / 2 + dy); ctx.scale(ps, ps);
+    ctx.fillStyle = C.navy; rr(ctx, -pw / 2, -PILL.h / 2, pw, PILL.h, 36); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic"; ctx.fillText(COPY.audience, 0, 13);
+    ctx.restore();
+  }
+  drawRateBlock(ctx, f, RATE.x, RATE.y, RATE.w, RATE.h, dy);
+  // two-word lockup, lines wipe up at f100 and f106 (caps, tracking −2%)
+  wipeText(ctx, COPY.lockup[0], 64, LOCK_Y[0] + dy, LOCK_SIZE, C.navy, prog(f, 100, 8), { track: -0.02 });
+  wipeText(ctx, COPY.lockup[1], 64, LOCK_Y[1] + dy, LOCK_SIZE, C.navy, prog(f, 106, 8), { track: -0.02 });
+}
+
+/* ---------------- scene 3: the amount (content in local coords, scale 1 = full screen) ---------------- */
+const AMT_SIZE = 236;
+function amountLayout() {
+  if (amountLayout.v) return amountLayout.v;
+  let size = AMT_SIZE, L = layout3D(COPY.amount, size);
+  while (L.width > 760) { size -= 4; L = layout3D(COPY.amount, size); }
+  const coinR = size * 0.44;
+  // group = digits + coin overhang; centre the group
+  const groupW = L.width + coinR * 1.6;
+  amountLayout.v = { size, L, coinR, x0: -groupW / 2, base: -30, labelY: [120, 222], labelSize: 92 };
+  return amountLayout.v;
+}
+function drawAmountContent(ctx, f, cx, cy, sc) {
+  const A = amountLayout();
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc);
+  // contact shadow under the digits
+  const landed = clamp((f - 150) / 15);
+  if (landed > 0) {
+    ctx.save(); ctx.filter = "blur(18px)"; ctx.fillStyle = `rgba(10,41,115,${0.12 * landed})`;
+    ctx.beginPath(); ctx.ellipse(A.x0 + A.L.width / 2, A.base + 26, A.L.width * 0.52, 22, 0, 0, 7); ctx.fill(); ctx.restore();
+  }
+  // digits drop in from f145, 3 f stagger, one squash on landing
+  A.L.items.forEach((it, i) => {
+    const s = 145 + i * 3, t = f - s;
+    if (t < 0) return;
+    const fall = 5;
+    let y = 0, sx = 1, sy = 1, a = 1;
+    if (t < fall) { const p = easeIn(t / fall); y = lerp(-340, 0, p); a = clamp(t / 2); sy = 1.04; sx = 0.97; }
+    else if (t < fall + 6) { const q = (t - fall) / 6; const k = Math.sin(Math.PI * Math.min(1, q * 1.2)) * (1 - q); sy = 1 - 0.14 * k * 1.6; sx = 1 + 0.08 * k * 1.6; }
+    drawSprite(ctx, it.s, A.x0 + it.x, A.base + y, sx, sy, a);
+  });
+  // coin rolls in from the right at f160 and leans on the last zero; gleam at f172
+  if (f >= 160) {
+    const last = A.L.items[A.L.items.length - 1];
+    const fx = A.x0 + last.x + last.s.adv + A.coinR * 0.8, fy = A.base - A.coinR + 6;
+    const p = easeOut(prog(f, 160, 12));
+    const x = lerp(fx + 900, fx, p);
+    const rot = -(x - fx) / A.coinR;
+    const lean = lerp(0, -0.16, easeOut(prog(f, 166, 8)));
+    drawCoin(ctx, x, fy, A.coinR, rot, lean, prog(f, 172, 9));
+  }
+  // label wipes up at f165 (two lines, 3 f stagger)
+  wipeText(ctx, COPY.amountLabel[0], 0, A.labelY[0], A.labelSize, C.navy, prog(f, 165, 8), { align: "center" });
+  wipeText(ctx, COPY.amountLabel[1], 0, A.labelY[1], A.labelSize, C.navy, prog(f, 168, 8), { align: "center" });
+  ctx.restore();
+}
+
+/* ---------------- scene 4 tiles (local coords 460×480) ---------------- */
+function tileRate(ctx, f) {
+  ctx.fillStyle = C.azure; rr(ctx, 0, 0, TW, TH, 48); ctx.fill();
+  font(ctx, 40, 600, 0); ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.textAlign = "left"; ctx.fillText(COPY.rateLabel, 40, 80);
+  font(ctx, 168, 800, -0.04); ctx.fillStyle = "#fff"; ctx.fillText(COPY.rate + "%", 34, 318);
+  font(ctx, 44, 800, -0.02); const cw = ctx.measureText(COPY.rateSuffix).width + 48;
+  ctx.fillStyle = "#fff"; rr(ctx, 40, 376, cw, 72, 36); ctx.fill();
+  ctx.fillStyle = C.navy; ctx.textAlign = "center"; ctx.fillText(COPY.rateSuffix, 40 + cw / 2, 427); ctx.textAlign = "left";
+  void f;
+}
+function tileBenefit(ctx, f) {
+  ctx.fillStyle = C.navy; rr(ctx, 0, 0, TW, TH, 48); ctx.fill();
+  font(ctx, 40, 600, 0); ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.textAlign = "left"; ctx.fillText(COPY.benefitLabel, 40, 80);
+  // 3D object for the key benefit: glossy "0%" badge, breaking the tile edge
+  const size = 250, L = layout3D(COPY.benefit, size);
+  L.items.forEach(it => drawSprite(ctx, it.s, 30 + it.x, 452));
+  void f;
+}
+
+function tileTransform(e) {
+  // camera pull-back: uniform scale about tile 3; at e=0 tile 3 covers the frame
+  const c3 = [TILES.t3.x + TW / 2, TILES.t3.y + TH / 2];
+  const k0 = Math.max(W / TW, H / TH);
+  const k = Math.exp(lerp(Math.log(k0), 0, e));
+  const c = [lerp(W / 2, c3[0], e), lerp(H / 2, c3[1], e)];
+  return { k, map: R => ({ x: c[0] + (R.x - c3[0]) * k, y: c[1] + (R.y - c3[1]) * k, w: R.w * k, h: R.h * k }) };
+}
+
+function drawScene4(ctx, f) {
+  const e = easeInOut(prog(f, 195, 15));
+  const T = tileTransform(e);
+  // scene 5 push-out (f240–250) of tiles 1–3 + headline; tile 4 expands to full frame (f240–252)
+  const out = easeIn(prog(f, 240, 10));
+  const c4 = [TILES.t4.x + TW / 2, TILES.t4.y + TH / 2];
+  const push = R => {
+    if (out <= 0) return R;
+    const dx = R.x + R.w / 2 - c4[0], dy = R.y + R.h / 2 - c4[1], d = Math.hypot(dx, dy) || 1;
+    return { ...R, x: R.x + dx / d * 1500 * out, y: R.y + dy / d * 1500 * out };
+  };
+  const ticks = { t1: 212, t2: 216, t3: 220, t4: 224 };
+  const placed = id => push(T.map(TILES[id]));
+
+  // tile 1 — portrait
+  { const R = placed("t1"); ctx.save(); shadowOn(ctx, T.k); ctx.fillStyle = "#fff"; rr(ctx, R.x, R.y, R.w, R.h, 48 * T.k); ctx.fill(); ctx.restore();
+    drawFootage(ctx, "portrait", R.x, R.y, R.w, R.h, 48 * T.k, 1.0, [0.5, 0.42]);
+    ctx.save(); ctx.translate(R.x, R.y); ctx.scale(T.k, T.k); drawCheck(ctx, TW - 64, 24, f, ticks.t1, false); ctx.restore(); }
+  // tile 2 — rate
+  { const R = placed("t2"); ctx.save(); ctx.translate(R.x, R.y); ctx.scale(T.k, T.k); shadowOn(ctx); ctx.fillStyle = C.azure; rr(ctx, 0, 0, TW, TH, 48); ctx.fill(); shadowOff(ctx);
+    tileRate(ctx, f); drawCheck(ctx, TW - 64, 24, f, ticks.t2, "azure"); ctx.restore(); }
+  // tile 3 — amount (the scene-3 view landing as a tile)
+  { const R = placed("t3");
+    ctx.save(); shadowOn(ctx, T.k); ctx.fillStyle = "#fff"; rr(ctx, R.x, R.y, R.w, R.h, 48 * T.k); ctx.fill(); ctx.restore();
+    const cs = lerp(1, AMOUNT_TILE_SCALE, e);
+    const tcx = R.x + R.w / 2, tcy = R.y + R.h / 2 + 22 * T.k * AMOUNT_TILE_SCALE / AMOUNT_TILE_SCALE * e;
+    ctx.save(); rr(ctx, R.x - 200, R.y, R.w + 400, R.h, 48 * T.k); ctx.clip();
+    drawAmountContent(ctx, f, lerp(AMOUNT_CENTER[0], tcx, e), lerp(AMOUNT_CENTER[1], tcy, e) + (1 - e) * 0 , cs);
+    ctx.restore();
+    ctx.save(); ctx.translate(R.x, R.y); ctx.scale(T.k, T.k); drawCheck(ctx, TW - 64, 24, f, ticks.t3, false); ctx.restore(); }
+  // tile 4 — benefit (navy), expands into the end card
+  { const R0 = T.map(TILES.t4), x = easeOut(prog(f, 240, 12));
+    const R = { x: lerp(R0.x, 0, x), y: lerp(R0.y, 0, x), w: lerp(R0.w, W, x), h: lerp(R0.h, H, x) };
+    const rad = lerp(48 * T.k, 0, x);
+    ctx.save(); shadowOn(ctx, T.k); ctx.fillStyle = C.navy; rr(ctx, R.x, R.y, R.w, R.h, rad); ctx.fill(); shadowOff(ctx);
+    rr(ctx, R.x, R.y, R.w, R.h, rad); ctx.clip();
+    const drop = easeIn(prog(f, 240, 8)) * 1100;
+    ctx.translate(R0.x, R0.y + drop); ctx.scale(T.k, T.k);
+    tileBenefit(ctx, f); drawCheck(ctx, TW - 64, 24, f, ticks.t4, true);
+    ctx.restore(); }
+
+  // headline wipes up at f205 (2 lines, 3 f stagger) — screen space, exits up at f240
+  const hy = -out * 700;
+  wipeText(ctx, COPY.headline[0], 64, HEAD_Y[0] + hy, HEAD_SIZE, C.navy, prog(f, 205, 8));
+  wipeText(ctx, COPY.headline[1], 64, HEAD_Y[1] + hy, HEAD_SIZE, C.navy, prog(f, 208, 8));
+}
+
+/* ---------------- scene 5: end card ---------------- */
+function drawScene5(ctx, f) {
+  if (f >= 252) { ctx.fillStyle = C.navy; ctx.fillRect(0, 0, W, H); }
+  // logo sting stand-in (f250–264, 14 f): wordmark wipes up + pops, azure rule draws under it
+  const ls = pop(f, 250);
+  if (ls > 0) {
+    ctx.save(); ctx.translate(540, 700); ctx.scale(ls, ls);
+    wipeText(ctx, COPY.logo, 0, 70, 250, "#FFFFFF", prog(f, 250, 8), { align: "center", track: -0.03 });
+    const rp = easeOut(prog(f, 256, 8));
+    if (rp > 0) { ctx.fillStyle = C.azure; rr(ctx, -190 * rp, 120, 380 * rp, 18, 9); ctx.fill(); }
+    ctx.restore();
+  }
+  // tagline f258 (2 lines, 3 f stagger)
+  wipeText(ctx, COPY.tagline[0], 540, 1000, 76, "#FFFFFF", prog(f, 258, 8), { align: "center", weight: 600 });
+  wipeText(ctx, COPY.tagline[1], 540, 1090, 76, "#FFFFFF", prog(f, 261, 8), { align: "center", weight: 600 });
+  // call to action f264
+  const cs = pop(f, 264);
+  if (cs > 0) {
+    font(ctx, 52, 800, -0.02); const tw = ctx.measureText(COPY.cta).width, pw = tw + 96;
+    ctx.save(); ctx.translate(540, 1236); ctx.scale(cs, cs);
+    ctx.fillStyle = "#FFFFFF"; rr(ctx, -pw / 2, -52, pw, 104, 52); ctx.fill();
+    ctx.fillStyle = C.navy; ctx.textAlign = "center"; ctx.fillText(COPY.cta, 0, 19);
+    ctx.restore();
+  }
+  // legal fades in at f252 and holds (≥24 px)
+  const la = easeOut(prog(f, 252, 8));
+  if (la > 0) {
+    ctx.save(); ctx.globalAlpha = la * 0.72; font(ctx, 26, 600, 0); ctx.fillStyle = "#FFFFFF"; ctx.textAlign = "center";
+    const words = COPY.legal.split(" "), lines = []; let line = "";
+    for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > 900) { lines.push(line); line = w; } else line = t; }
+    lines.push(line);
+    lines.forEach((l, i) => ctx.fillText(l, 540, 1390 + i * 36));
+    ctx.restore();
+  }
+}
+
+/* ---------------- frame ---------------- */
+let showSafe = false;
+function renderFrame(f) {
+  f = Math.max(0, Math.min(FRAMES - 1, f));
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = "none";
+  ctx.fillStyle = C.canvas; ctx.fillRect(0, 0, W, H);
+
+  // scroll f135–150 (one screen up)
+  const scrollAt = g => -H * easeInOut(prog(g, 135, 15));
+  const dy = scrollAt(f);
+
+  if (f < 150) drawScene12(ctx, f, dy);
+  if (f >= 135 && f < 195) {
+    const top = H + dy;
+    ctx.save(); if (f < 150) { shadowOn(ctx); } ctx.fillStyle = "#FFFFFF"; rr(ctx, 0, top, W, H, lerp(48, 0, prog(f, 145, 5))); ctx.fill(); ctx.restore();
+    drawAmountContent(ctx, f, AMOUNT_CENTER[0], AMOUNT_CENTER[1] + top, 1);
+  }
+  if (f >= 195 && f < 254) drawScene4(ctx, f);
+  if (f >= 250) {
+    ctx.save();
+    if (f < 252) { const x = easeOut(prog(f, 240, 12)); const R0 = tileTransform(1).map(TILES.t4); rr(ctx, lerp(R0.x, 0, x), lerp(R0.y, 0, x), lerp(R0.w, W, x), lerp(R0.h, H, x), lerp(48, 0, x)); ctx.clip(); }
+    drawScene5(ctx, f); ctx.restore();
+  }
+
+  // composite to output, with 6–8 px vertical motion blur on scrolls only
+  out.setTransform(1, 0, 0, 1, 0, 0); out.globalAlpha = 1;
+  const v = Math.abs(scrollAt(f) - scrollAt(f - 1));
+  const blur = Math.min(8, v / 30);
+  if (blur > 0.5) {
+    const N = 7;
+    for (let i = 0; i < N; i++) { out.globalAlpha = 1 / (i + 1); out.drawImage(buf, 0, lerp(-blur / 2, blur / 2, i / (N - 1))); }
+    out.globalAlpha = 1;
+  } else out.drawImage(buf, 0, 0);
+
+  if (showSafe) {
+    out.save(); out.strokeStyle = "rgba(255,0,80,0.8)"; out.lineWidth = 3; out.setLineDash([16, 10]);
+    out.strokeRect(64, 250, W - 128, H - 650); out.restore();
+  }
+}
+
+/* ---------------- boot ---------------- */
+window.FILM = { W, H, FPS, FRAMES, renderFrame };
+window.filmReady = (async () => {
+  await Promise.all([
+    document.fonts.load('800 100px "Inter Tight"', "KOMİSSİYASIZ əİığşçöü 0123456789%"),
+    document.fonts.load('600 100px "Inter Tight"', "Hər kəs üçün əİığşçöü"),
+  ]);
+  for (const k of ["work", "portrait"]) FOOTAGE[k] = (await loadImg(FOOTAGE_SRC[k])) || paintPlaceholder(k);
+  return true;
+})();
+
+const isRender = new URLSearchParams(location.search).has("render");
+if (isRender) document.body.classList.add("render");
+else window.filmReady.then(() => {
+  const scrub = document.getElementById("scrub"), tc = document.getElementById("tc"), btn = document.getElementById("play");
+  let f = +(new URLSearchParams(location.search).get("f") || 0), playing = !new URLSearchParams(location.search).has("f"), last = 0;
+  const show = () => { renderFrame(f); scrub.value = f; tc.textContent = `f${String(f).padStart(3, "0")} · ${(f / FPS).toFixed(2)}s`; };
+  scrub.oninput = () => { f = +scrub.value; playing = false; btn.textContent = "Play"; show(); };
+  btn.onclick = () => { playing = !playing; btn.textContent = playing ? "Pause" : "Play"; };
+  document.getElementById("safe").onchange = e => { showSafe = e.target.checked; show(); };
+  btn.textContent = playing ? "Pause" : "Play";
+  const tick = t => { if (playing && t - last >= 1000 / FPS) { last = t; f = (f + 1) % FRAMES; show(); } requestAnimationFrame(tick); };
+  show(); requestAnimationFrame(tick);
+});
+</script>
+</body>
+</html>
