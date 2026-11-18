@@ -250,7 +250,8 @@ function makeBolt() {
   [[0.18, 1], [-0.55, -0.12], [-0.06, -0.12], [-0.22, -1], [0.56, 0.16], [0.06, 0.16]].forEach(([x, y], i) => i ? s.lineTo(x, y) : s.moveTo(x, y)); s.closePath();
   return extrude(s, 0.3, 0.1, M.gold);
 }
-const O = {}; let DIGITS = null;
+const O = { pct: "pct", shield: "shield", coinBig: "coin", phone: "phone", pin: "pin", bolt: "bolt" }; let DIGITS = null;
+const SPR = {};   // name → Image (assets/objects/<name>.png)
 function build3D() {
   O.shield = wrap(makeShield()); O.cal = wrap(makeCalendar()); O.pct = wrap(makePercent()); O.phone = wrap(makePhone());
   O.coinBig = wrap(makeCoin()); O.pin = wrap(makePin()); O.bolt = wrap(makeBolt());
@@ -280,16 +281,18 @@ function blit(g, rect) {
   const x0 = Math.max(0, rect.x), y0 = Math.max(0, rect.y), x1 = Math.min(W, rect.x + rect.w), y1 = Math.min(H, rect.y + rect.h);
   if (x1 > x0 && y1 > y0) g.drawImage(glc, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
 }
-// draw a 3D object centred at (cx,cy) px with the given size (px), clipped to a tile
+// draw a rendered 3D object (transparent PNG) centred at (cx,cy), its longest side = size px.
+// rot = [rx, ry, rz] from the old 3D code: mapped to a gentle 2D tilt + horizontal "turn" squash.
 function obj3D(g, o, cx, cy, size, rot = [0, 0, 0], { clipR = null, radius = 44, alpha = 1, shadow = true } = {}) {
-  if (size < 2 || alpha <= 0.01) return;
-  const box = size * 1.9;
-  o.scale.setScalar(size * VH / box); o.position.set(0, 0, 0); o.rotation.set(rot[0], rot[1], rot[2]);
-  const r = renderView(o, { x: cx - box / 2, y: cy - box / 2, w: box, h: box });
+  const img = SPR[o]; if (!img || size < 2 || alpha <= 0.01) return;
+  const k = size / Math.max(img.width, img.height), w = img.width * k, h = img.height * k;
+  const tilt = rot[2] * 0.35 + rot[0] * 0.25 + (rot[1] + 0.4) * 0.12, turn = 1 - 0.06 * Math.abs(Math.sin(rot[1] + 0.4));
   g.save(); g.globalAlpha *= alpha;
   if (clipR) { rr(g, clipR.x, clipR.y, clipR.w, clipR.h, radius); g.clip(); }
-  if (shadow) { g.save(); g.filter = `blur(${size * 0.09}px)`; g.fillStyle = "rgba(10,41,115,0.15)"; g.beginPath(); g.ellipse(cx + size * 0.05, cy + size * 0.58, size * 0.4, size * 0.07, 0, 0, 7); g.fill(); g.restore(); }
-  blit(g, r); g.restore();
+  if (shadow) { g.save(); g.filter = `blur(${size * 0.06}px)`; g.fillStyle = "rgba(1,30,95,0.18)"; g.beginPath(); g.ellipse(cx + size * 0.04, cy + h * 0.5, w * 0.36, size * 0.05, 0, 0, 7); g.fill(); g.restore(); }
+  g.translate(cx, cy); g.rotate(tilt); g.scale(turn * (1 + 0.015 * wave(RT, 70, cx)), 1 + 0.015 * wave(RT, 70, cx + 1));
+  g.drawImage(img, -w / 2, -h / 2, w, h);
+  g.restore();
 }
 // idle float: gentle yaw sway, pitch and bob — keeps every object alive
 const idle = (_t, ph, amp = 1) => ({ rx: 0.1 * amp * wave(RT, 140, ph), ry: 0.22 * amp * wave(RT, 110, ph + 1), bob: 7 * amp * wave(RT, 84, ph + 2) });
@@ -325,8 +328,8 @@ function checkbox(g, x, y, s, t, at, mode) {
    ============================================================ */
 const CARD = { x: 64, y: 96, w: 952, h: 680 };
 const PILL = { x: 64, y: 808, h: 76 };
-const T_RATE = { x: 64, y: 916, w: 952, h: 330 };
-const LOCK = [1376, 1484], LOCK_SIZE = 110;
+const T_RATE = { x: 64, y: 916, w: 952, h: 300 };
+const T_LOCK = { x: 64, y: 1240, w: 952, h: 270 };
 const BIG = { x: 64, y: 470, w: 952, h: 860 };
 const GW = 464, GH = 324;
 const SLOT = {
@@ -372,15 +375,16 @@ function drawScene12(g, t) {
     tileBase(g, Rr, C.tRate, 1, a.a);
     tileHeader(g, Rr, 1, COPY.rateTitle, prog(t, 44, 10), { glyph: "%" });
     const id = idle(t, 0.3), ps = spring(t - 48, 0.3, 0.55);
-    obj3D(g, O.pct, Rr.x + 810, Rr.y + 215 + id.bob, 330 * ps, [id.rx + 0.25 + v * 0.004, -0.5 + id.ry - (1 - ps) * 1.4, 0.18], { clipR: Rr, alpha: a.a });
-    drawOdometer(g, t, Rr.x + 40, Rr.y + 262, 168, a.a);
+    obj3D(g, O.pct, Rr.x + 800, Rr.y + 175 + id.bob, 340 * ps, [id.rx + 0.25 + v * 0.004, -0.5 + id.ry - (1 - ps) * 1.4, 0.18], { clipR: Rr, alpha: a.a });
+    drawOdometer(g, t, Rr.x + 40, Rr.y + 246, 168, a.a);
   }
-  { // "Zaminsiz kredit" on 3.7–4.5 s, with a floating 3D shield
-    const dy = scrollY(t, 4), v = scrollV(t, 5);
-    rise(g, COPY.lockup[0], 64, LOCK[0] + dy, LOCK_SIZE, "#fff", smooth(prog(t, 108, 12)), { weight: 800, track: -0.03 });
-    rise(g, COPY.lockup[1], 64, LOCK[1] + dy, LOCK_SIZE, "#fff", smooth(prog(t, 124, 12)), { weight: 800, track: -0.03 });
-    const id = idle(t, 1.7), ps = spring(t - 110, 0.3, 0.55);
-    obj3D(g, O.shield, 850, 1420 + id.bob + scrollY(t, 5), 250 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12]);
+  { // "Zaminsiz kredit" tile on 3.5–4.3 s — both lines finish before the reading hold at story 130
+    const a = tileIn(t, 102), v = scrollV(t, 4), Rl = { ...T_LOCK, y: T_LOCK.y + a.dy + scrollY(t, 4) };
+    tileBase(g, Rl, "#FFFFFF", 1, a.a);
+    const id = idle(t, 1.7), ps = spring(t - 108, 0.3, 0.55);
+    obj3D(g, O.shield, Rl.x + 805, Rl.y + 150 + id.bob, 300 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12], { clipR: Rl, alpha: a.a });
+    rise(g, COPY.lockup[0], Rl.x + 40, Rl.y + 122, 104, C.ink, smooth(prog(t, 106, 12)), { weight: 800, track: -0.03, alpha: a.a });
+    rise(g, COPY.lockup[1], Rl.x + 40, Rl.y + 224, 104, C.ink, smooth(prog(t, 112, 12)), { weight: 800, track: -0.03, alpha: a.a });
   }
 }
 function drawOdometer(g, t, x, base, size, alpha) {
@@ -427,30 +431,25 @@ function drawAmount(g, t, Rbig, Rsmall, e) {
 }
 function drawDigits(g, t, D, cap) {
   if (t < 138) return;
-  const { grp, items, width } = DIGITS, coinR = 0.52, shiftX = -coinR * 0.7;
-  const u = VH / D.h, k = Math.min(cap / 0.73 * u, 0.84 * VH * (D.w / D.h) / (width + coinR * 1.5));
-  grp.scale.setScalar(k); grp.position.set(0, -0.36 * k, 0);
+  const img = SPR.amount, coin = SPR.coin; if (!img) return;
+  const k = Math.min(D.w * 0.74 / img.width, D.h * 0.95 / img.height), w = img.width * k, h = img.height * k;
+  const cx = D.x + D.w / 2 - w * 0.09, cy = D.y + D.h / 2;
+  const tt = t - 140, sp = spring(tt, 0.3, 0.55);
+  const land = Math.max(0, Math.sin(Math.min(1, Math.max(0, (tt - 6) / 10)) * Math.PI)) * 0.06;   // one soft squash on landing
   const id = idle(t, 0.8, 0.6);
-  grp.rotation.set(0.1 + id.rx * 0.5, id.ry * 0.45, 0);
-  items.forEach((h, i) => {
-    const tt = t - (140 + i * 3);
-    h.visible = tt > 0;
-    const sp = spring(tt, 0.34, 0.5), sr = spring(tt, 0.28, 0.62);
-    h.position.set(h.userData.x + shiftX, (1 - sp) * 2.6, 0);
-    h.rotation.set(-(1 - sr) * 1.8, (1 - sr) * 0.6, 0);
-  });
-  const c = O.coinBig;
-  if (t >= 156) {   // coin rolls in from the right and leans on the last zero
-    const sp = spring(t - 156, 0.2, 0.82), xf = width / 2 + shiftX + coinR * 0.66, x = lerp(xf + 5.5, xf, sp);
-    grp.add(c); c.position.set(x, coinR * 0.72, 0.15); c.scale.setScalar(coinR * 2);
-    c.rotation.set(0, 0.45 + 0.15 * wave(RT, 120, 1), (xf - x) / coinR + lerp(0, 0.26, smooth(prog(t, 164, 14))), "YZX");
+  // contact shadow
+  g.save(); g.globalAlpha = clamp(tt / 10); g.filter = `blur(${h * 0.08}px)`; g.fillStyle = "rgba(1,30,95,0.16)";
+  g.beginPath(); g.ellipse(cx, cy + h * 0.46, w * 0.42, h * 0.06, 0, 0, 7); g.fill(); g.restore();
+  g.save(); g.globalAlpha = clamp(tt / 4);
+  g.translate(cx, cy + (1 - sp) * -D.h * 0.9 + id.bob * 0.6 * (h / 200)); g.rotate(id.ry * 0.04 - (1 - sp) * 0.12);
+  g.scale(1 + land, 1 - land); g.drawImage(img, -w / 2, -h / 2, w, h); g.restore();
+  if (t >= 156 && coin) {   // coin rolls in from the right, leans on the last zero
+    const cs = h * 0.78, sc = spring(t - 156, 0.2, 0.82), xf = cx + w * 0.5 + cs * 0.22, x = lerp(xf + D.w * 0.7, xf, sc);
+    const roll = (xf - x) / (cs / 2) + lerp(0, -0.22, smooth(prog(t, 164, 14)));
+    g.save(); g.filter = `blur(${cs * 0.06}px)`; g.fillStyle = "rgba(1,30,95,0.16)"; g.beginPath(); g.ellipse(x, cy + cs * 0.48, cs * 0.34, cs * 0.05, 0, 0, 7); g.fill(); g.restore();
+    g.save(); g.translate(x, cy + h * 0.04); g.rotate(roll); g.drawImage(coin, -cs / 2, -cs / 2, cs, cs * coin.height / coin.width); g.restore();
   }
-  const r = renderView(grp, D, t >= 156 ? c : null);
-  g.save(); g.filter = `blur(${D.h * 0.04}px)`; g.fillStyle = "rgba(10,41,115,0.11)"; g.beginPath(); g.ellipse(D.x + D.w / 2, D.y + D.h * 0.7, D.w * 0.36, D.h * 0.04, 0, 0, 7); g.fill(); g.restore();
-  blit(g, r);
-  if (c.parent === grp) { grp.remove(c); scene.add(c); }
 }
-
 /* ---------------- scene 4: grid (6.2–9.7 s, "VTB.az … onlayn … filialda … sürətli rəsmiləşdir") ---------------- */
 const PULL = 186, EXP = 292;
 function gridRects(t) {
@@ -559,9 +558,7 @@ window.filmReady = (async () => {
     document.fonts.load('600 100px "VTB Group"', "Neft və mədənçıxarma işçilərinə"),
     document.fonts.load('400 100px "VTB Group"', "Kredit illik"),
   ]);
-  const buf3 = await (await fetch("fonts/vtb/VTB95.OTF")).arrayBuffer();
-  FONT3D = new Font(new TTFLoader().parse(buf3));
-  build3D();
+  for (const n of ["pct", "shield", "coin", "amount", "phone", "pin", "bolt"]) { SPR[n] = await loadImg(`assets/objects/${n}.png`); if (!SPR[n]) throw new Error("missing assets/objects/" + n + ".png"); }
   const imgs = await Promise.all(Array.from({ length: FOOTAGE_FRAMES }, (_, i) => loadImg(`footage/frames/${String(i + 1).padStart(4, "0")}.jpg`)));
   FOOT.push(...imgs.filter(Boolean));
   if (!FOOT.length) throw new Error("footage frames missing — run render.mjs (it extracts footage/frames/ from footage/worker.mp4)");
