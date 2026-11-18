@@ -1,16 +1,27 @@
-# VTB Bank — Cash loan · 10 s vertical (1080×1920)
+# VTB Bank — Cash loan · 14.4 s vertical (1080×1920)
 
 Working animatic of the motion brief (Nov 18, 2026). The film is drawn in code, frame by frame, so every cue in the brief lands on its exact frame.
 
 | File | What |
 |---|---|
-| `out/vtb-cash-loan-1080x1920-30fps.mp4` | 10.0 s, 300 frames, H.264 + temp audio |
+| `out/vtb-cash-loan-1080x1920-30fps.mp4` | 14.4 s, 432 frames, H.264, voiceover + soft SFX |
+| `audio/voiceover.wav` | The voiceover the film is timed to |
 | `out/style-frames/scene-*.png` | 5 style frames, 1080×1920, one per scene |
 | `film.html` | The film (2D canvas + three.js; `vendor/` holds three.js r170, MIT). Open it in a browser (served over http) to play or scrub it. `?f=120` opens on a frame. Includes a safe-area overlay |
 | `render.mjs` | `node render.mjs` renders the MP4 and the stills. Also takes `--stills`, `--frames 0,60,120` and `--prores` (ProRes 422 .mov) |
-| `sfx.py` | Temp sound: synthesised SFX on the brief's cue frames plus a quiet 120 BPM guide pulse |
+| `sfx.py` | Soft synthesised SFX mixed under the voiceover |
 
 Preview: `npx serve films/vtb-cash-loan` (or any static server), then open `/film.html`.
+
+## Timed to the voiceover (v3)
+| Time | Voiceover | On screen |
+|---|---|---|
+| 0.0–4.5 s | Bank VTB-dən səhiyyə işçiləri üçün 9,9%-dən başlayan zaminsiz kredit | Person → card. The pill "Neft və mədənçıxarma işçilərinə" appears, the odometer lands on 9,9%-dən, then "Zaminsiz kredit" with a 3D shield |
+| 4.6–6.0 s | 100 min manata dək məbləği | Scroll to the amount: 3D "100 000" drops in, the coin rolls in, "AZN-dək nağd kredit" |
+| 6.0–9.7 s | VTB.az saytından onlayn və ya ən yaxın filialda sürətli rəsmiləşdir | Pull back into the grid. The Onlayn, Filialda and Sürətli tiles tick on their words, with the headline "Onlayn və ya filialda / sürətli rəsmiləşdir" |
+| 9.7–14.4 s | Daha ətraflı məlumat üçün 986 qısa nömrəsi ilə əlaqə saxla | The navy tile expands into the end card, then the logo, "Daha ətraflı məlumat üçün", a 3D "986" and "qısa nömrə" |
+
+The voiceover still says **səhiyyə işçiləri**, while the screen says **neft və mədənçıxarma işçilərinə**. Re-record the voiceover line to match.
 
 ## Look and motion (v2)
 - **Style:** soft app tiles in the manner of the Yandex Pay / Go and WB-bank screens. Each tile has a small header with an icon, a big number or two-line label, and a glossy 3D object cropped at its corner. Tiles use VTB-blue and lavender tints on a light canvas, and the end card is navy.

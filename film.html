@@ -33,14 +33,14 @@
   <canvas id="gl" width="1080" height="1920"></canvas>
   <div class="ui">
     <button id="play">Pause</button>
-    <input id="scrub" type="range" min="0" max="299" value="0">
+    <input id="scrub" type="range" min="0" max="431" value="0">
     <span id="tc">f000 · 0.00s</span>
     <label><input id="safe" type="checkbox"> safe area</label>
   </div>
 </div>
 <script type="module">
 /* ============================================================
-   VTB Bank — Cash loan · 10 s vertical (1080×1920, 30 fps, 300 frames)
+   VTB Bank — Cash loan · 14.4 s vertical (1080×1920, 30 fps, 432 frames), timed to the voiceover
    Style: soft app tiles (Yandex / WB-bank screens) with glossy 3D objects
    cropped at the tile corner. Motion: springs + continuous idle float,
    real motion blur (sub-frame accumulation) in the master render.
@@ -53,7 +53,7 @@ import { TTFLoader } from "three/addons/loaders/TTFLoader.js";
 import { Font } from "three/addons/loaders/FontLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const W = 1080, H = 1920, FPS = 30, FRAMES = 300;
+const W = 1080, H = 1920, FPS = 30, FRAMES = 432;   // 14.4 s — matches the voiceover
 
 // ---- Palette: VTB blues (approximate — swap for brandbook values) + soft tile tints ----
 const C = {
@@ -63,23 +63,26 @@ const C = {
   tRate: "#E2F0FB", tCom: "#E9E8FC", tTerm: "#E3ECFA", tAmount: "#E6F3FC",
 };
 
-// ---- Copy (DRAFT — figures from the 4 Sep 2026 vtb.az campaign; confirm with VTB) ----
+// ---- Copy — follows the voiceover (audio/voiceover.wav). Only 9,9% and 100 000 are shown as conditions.
+// VO: "Bank VTB-dən səhiyyə işçiləri üçün 9,9%-dən başlayan zaminsiz kredit. / 100 min manata dək məbləği
+//      VTB.az saytından onlayn və ya ən yaxın filialda sürətli rəsmiləşdir. / Daha ətraflı məlumat üçün
+//      986 qısa nömrəsi ilə əlaqə saxla."   (on screen the profession is oil & mining workers, per client)
 const COPY = {
+  audience: "Neft və mədənçıxarma işçilərinə",
   rateTitle: "İllik faiz", rate: "9,9", rateSuffix: "%-dən",
-  comTitle: "Komissiya", com: "0%", comSub: "əlavə ödəniş yoxdur",
-  termTitle: "Müddət", term: "59 ay", termSub: "aya qədər",
+  lockup: ["Zaminsiz", "kredit"],
   amountTitle: "Kredit məbləği", amount: "100 000", amountLabel: ["AZN-dək", "nağd kredit"],
-  headline: ["Arzuların", "daha yaxındır"],
+  headline: ["Onlayn və ya filialda", "sürətli rəsmiləşdir"],
   grid: {
     rate:   ["9,9%-dən", "illik faiz"],
-    com:    ["0% komissiya", "əlavə ödənişsiz"],
-    term:   ["59 aya qədər", "rahat ödəniş"],
-    online: ["Onlayn müraciət", "vtb.az · 986"],
+    online: ["Onlayn", "vtb.az saytından"],
+    branch: ["Filialda", "ən yaxın ünvanda"],
+    fast:   ["Sürətli", "rəsmiləşdirmə"],
   },
   logo: "VTB",
-  tagline: ["Birlikdə hər şey", "alınacaq"],
-  cta: "vtb.az · 986",
-  legal: "Kredit illik 9,9%-dən, 59 aya qədər, 0% komissiya ilə verilir. Ətraflı şərtlər vtb.az saytında və 986 məlumat mərkəzində. [Yekun hüquqi mətn VTB tərəfindən təqdim olunacaq]",
+  info: "Daha ətraflı məlumat üçün",
+  shortNum: "qısa nömrə",
+  legal: "Kredit illik 9,9%-dən, 100 000 AZN-dək, zaminsiz verilir. Ətraflı şərtlər vtb.az saytında və 986 məlumat mərkəzində. [Yekun hüquqi mətn VTB tərəfindən təqdim olunacaq]",
 };
 const FOOTAGE_SRC = { work: "footage/work.jpg", portrait: "footage/portrait.jpg" };
 
@@ -261,10 +264,23 @@ function makePhone() {
   return g;
 }
 
+function makePin() {
+  const g = new THREE.Group();
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 48, 32), M.azure); head.position.y = 0.35; g.add(head);
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.47, 0.95, 48), M.azure); tip.rotation.z = Math.PI; tip.position.y = -0.38; g.add(tip);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.22, 32, 24), M.white); dot.position.set(0, 0.38, 0.42); dot.scale.z = 0.5; g.add(dot);
+  return g;
+}
+function makeBolt() {
+  const s = new THREE.Shape();
+  [[0.18, 1], [-0.55, -0.12], [-0.06, -0.12], [-0.22, -1], [0.56, 0.16], [0.06, 0.16]].forEach(([x, y], i) => i ? s.lineTo(x, y) : s.moveTo(x, y)); s.closePath();
+  return extrude(s, 0.3, 0.1, M.gold);
+}
 const O = {}; let DIGITS = null;
 function build3D() {
   O.shield = wrap(makeShield()); O.cal = wrap(makeCalendar()); O.pct = wrap(makePercent()); O.phone = wrap(makePhone());
-  O.coinBig = wrap(makeCoin());
+  O.coinBig = wrap(makeCoin()); O.pin = wrap(makePin()); O.bolt = wrap(makeBolt());
+  O.n986 = wrap(text3D("986", { size: 1, depth: 0.36, bevel: 0.06 }));
   // big amount numerals: one group, digits laid out in font units (cap height ≈ 0.73)
   const grp = new THREE.Group(), items = []; let x = 0;
   for (const ch of COPY.amount) {
@@ -331,64 +347,64 @@ function checkbox(g, x, y, s, t, at, mode) {
 /* ============================================================
    LAYOUT (64 px margins; text inside y 250–1520)
    ============================================================ */
-const CARD = { x: 64, y: 96, w: 952, h: 700 };
-const T_RATE = { x: 64, y: 828, w: 952, h: 330 };
-const T_COM = { x: 64, y: 1182, w: 464, h: 330 };
-const T_TERM = { x: 552, y: 1182, w: 464, h: 330 };
+const CARD = { x: 64, y: 96, w: 952, h: 680 };
+const PILL = { x: 64, y: 808, h: 76 };
+const T_RATE = { x: 64, y: 916, w: 952, h: 330 };
+const LOCK = [1376, 1484], LOCK_SIZE = 110;
 const BIG = { x: 64, y: 470, w: 952, h: 860 };
 const GW = 464, GH = 324;
 const SLOT = {
-  portrait: { x: 64, y: 490, w: GW, h: GH }, rate: { x: 552, y: 490, w: GW, h: GH },
-  amount: { x: 64, y: 838, w: GW, h: GH }, com: { x: 552, y: 838, w: GW, h: GH },
-  term: { x: 64, y: 1186, w: GW, h: GH }, online: { x: 552, y: 1186, w: GW, h: GH },
+  portrait: { x: 64, y: 490, w: GW, h: GH }, rate:   { x: 552, y: 490, w: GW, h: GH },
+  amount:   { x: 64, y: 838, w: GW, h: GH }, online: { x: 552, y: 838, w: GW, h: GH },
+  branch:   { x: 64, y: 1186, w: GW, h: GH }, fast:  { x: 552, y: 1186, w: GW, h: GH },
 };
-const TICKS = { portrait: 214, rate: 218, amount: 222, com: 226, term: 230, online: 234 };
+// checkbox ticks: the last three land on "onlayn" (7.40 s), "filialda" (8.74 s), "sürətli" (9.12 s)
+const TICKS = { portrait: 198, rate: 204, amount: 210, online: 222, branch: 262, fast: 274 };
 
-/* ---------------- scroll (f128–150) with per-element lag ---------------- */
-const SCROLL = 128, SDUR = 22;
+/* ---------------- scroll to the amount (f132–154, on "100 min") with per-element lag ---------------- */
+const SCROLL = 132, SDUR = 22;
 const scrollY = (t, lag = 0) => -H * inOut(prog(t, SCROLL + lag, SDUR));
 const scrollV = (t, lag = 0) => scrollY(t, lag) - scrollY(t - 1, lag);
 
-/* ---------------- scene 1–2: person → offer ---------------- */
+/* ---------------- scene 1–2: person → offer (0–4.5 s) ---------------- */
 function footageRect(t) {
-  const s = spring(t - 40, 0.26, 0.86);
+  const s = spring(t - 20, 0.26, 0.86);
   return { x: lerp(0, CARD.x, s), y: lerp(0, CARD.y, s), w: lerp(W, CARD.w, s), h: lerp(H, CARD.h, s), r: lerp(0, 44, clamp(s)) };
 }
 const tileIn = (t, start) => ({ dy: (1 - spring(t - start, 0.3, 0.78)) * 260, a: clamp((t - start) / 7) });
 
 function drawScene12(g, t) {
-  const zoom = 1.03 + 0.05 * smooth(clamp(t / 60)) + 0.0006 * Math.max(0, t - 60);
+  const zoom = 1.03 + 0.05 * smooth(clamp(t / 40)) + 0.0006 * Math.max(0, t - 40);
   const fr = footageRect(t);
   const R = { x: fr.x, y: fr.y + scrollY(t, 0), w: fr.w, h: fr.h };
-  if (t >= 40) { g.save(); softShadow(g); g.fillStyle = "#fff"; rr(g, R.x, R.y, R.w, R.h, fr.r); g.fill(); g.restore(); }
+  if (t >= 20) { g.save(); softShadow(g); g.fillStyle = "#fff"; rr(g, R.x, R.y, R.w, R.h, fr.r); g.fill(); g.restore(); }
   drawFootage(g, "work", R, fr.r, zoom, [0.5, 0.5]);
-  if (t < 56) return;
+  if (t < 24) return;
 
-  { // rate tile — 3D % cropped at the right edge
-    const a = tileIn(t, 58), v = scrollV(t, 2), Rr = { ...T_RATE, y: T_RATE.y + a.dy + scrollY(t, 2) };
+  { // audience pill — on "işçiləri üçün" (0.9–1.6 s)
+    const ps = spring(t - 28, 0.34, 0.6);
+    if (ps > 0) {
+      font(g, 36, 600, 0); const pw = g.measureText(COPY.audience).width + 76;
+      g.save(); g.translate(PILL.x + pw / 2, PILL.y + PILL.h / 2 + scrollY(t, 1)); g.scale(lerp(0.85, 1, ps), lerp(0.85, 1, ps)); g.globalAlpha = clamp(ps * 2);
+      g.fillStyle = C.navy; rr(g, -pw / 2, -PILL.h / 2, pw, PILL.h, PILL.h / 2); g.fill();
+      g.fillStyle = C.azure; g.beginPath(); g.arc(-pw / 2 + 32, 0, 8, 0, 7); g.fill();
+      g.fillStyle = "#fff"; g.textAlign = "left"; g.fillText(COPY.audience, -pw / 2 + 52, 13); g.restore();
+    }
+  }
+  { // rate tile — odometer lands on "9,9%-dən" (1.9–3.0 s); 3D % cropped at the edge
+    const a = tileIn(t, 40), v = scrollV(t, 2), Rr = { ...T_RATE, y: T_RATE.y + a.dy + scrollY(t, 2) };
     tileBase(g, Rr, C.tRate, 1, a.a);
-    tileHeader(g, Rr, 1, COPY.rateTitle, prog(t, 62, 10), { glyph: "%" });
-    const id = idle(t, 0.3), ps = spring(t - 66, 0.3, 0.55);
+    tileHeader(g, Rr, 1, COPY.rateTitle, prog(t, 44, 10), { glyph: "%" });
+    const id = idle(t, 0.3), ps = spring(t - 48, 0.3, 0.55);
     obj3D(g, O.pct, Rr.x + 810, Rr.y + 215 + id.bob, 330 * ps, [id.rx + 0.25 + v * 0.004, -0.5 + id.ry - (1 - ps) * 1.4, 0.18], { clipR: Rr, alpha: a.a });
     drawOdometer(g, t, Rr.x + 40, Rr.y + 262, 168, a.a);
   }
-  { // commission tile — shield
-    const a = tileIn(t, 66), v = scrollV(t, 4), Rc = { ...T_COM, y: T_COM.y + a.dy + scrollY(t, 4) };
-    tileBase(g, Rc, C.tCom, 1, a.a);
-    tileHeader(g, Rc, 1, COPY.comTitle, prog(t, 70, 10), { icon: "#6F6CF0", glyph: "0" });
-    const id = idle(t, 1.7), ps = spring(t - 74, 0.3, 0.55);
-    obj3D(g, O.shield, Rc.x + 365, Rc.y + 236 + id.bob, 250 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12], { clipR: Rc, alpha: a.a });
-    rise(g, COPY.com, Rc.x + 36, Rc.y + 232, 104, C.ink, smooth(prog(t, 76, 12)), { weight: 800, track: -0.04 });
-    rise(g, COPY.comSub, Rc.x + 38, Rc.y + 290, 28, C.inkSoft, smooth(prog(t, 80, 12)), { weight: 600, track: 0 });
-  }
-  { // term tile — calendar
-    const a = tileIn(t, 72), v = scrollV(t, 6), Rt = { ...T_TERM, y: T_TERM.y + a.dy + scrollY(t, 6) };
-    tileBase(g, Rt, C.tTerm, 1, a.a);
-    tileHeader(g, Rt, 1, COPY.termTitle, prog(t, 76, 10), { icon: C.navy, glyph: "59" });
-    const id = idle(t, 3.1), ps = spring(t - 80, 0.3, 0.55);
-    obj3D(g, O.cal, Rt.x + 372, Rt.y + 240 + id.bob, 240 * ps, [id.rx + 0.15 + v * 0.004, -0.45 + id.ry - (1 - ps) * 1.6, 0.1], { clipR: Rt, alpha: a.a });
-    rise(g, COPY.term, Rt.x + 36, Rt.y + 232, 104, C.ink, smooth(prog(t, 82, 12)), { weight: 800, track: -0.04 });
-    rise(g, COPY.termSub, Rt.x + 38, Rt.y + 290, 28, C.inkSoft, smooth(prog(t, 86, 12)), { weight: 600, track: 0 });
+  { // "Zaminsiz kredit" on 3.7–4.5 s, with a floating 3D shield
+    const dy = scrollY(t, 4), v = scrollV(t, 5);
+    rise(g, COPY.lockup[0], 64, LOCK[0] + dy, LOCK_SIZE, C.ink, smooth(prog(t, 108, 12)), { weight: 800, track: -0.03 });
+    rise(g, COPY.lockup[1], 64, LOCK[1] + dy, LOCK_SIZE, C.ink, smooth(prog(t, 124, 12)), { weight: 800, track: -0.03 });
+    const id = idle(t, 1.7), ps = spring(t - 110, 0.3, 0.55);
+    obj3D(g, O.shield, 850, 1420 + id.bob + scrollY(t, 5), 250 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12]);
   }
 }
 function drawOdometer(g, t, x, base, size, alpha) {
@@ -396,7 +412,7 @@ function drawOdometer(g, t, x, base, size, alpha) {
   const band = [base - size * 0.82, base + size * 0.16], lh = size * 0.95, tr = -0.04 * size;
   let cx = x, col = 0;
   for (const ch of COPY.rate) {
-    const aw = g.measureText(ch).width, start = 66 + col * 4;
+    const aw = g.measureText(ch).width, start = 52 + col * 4;
     if (t >= start) {
       g.save(); g.beginPath(); g.rect(cx - 6, band[0], aw + 12, band[1] - band[0]); g.clip();
       if (/\d/.test(ch)) {
@@ -407,7 +423,7 @@ function drawOdometer(g, t, x, base, size, alpha) {
     }
     col += /\d/.test(ch) ? 1 : 0.5; cx += aw + tr;
   }
-  rise(g, COPY.rateSuffix, cx + 10, base, 64, C.ink, smooth(prog(t, 86, 12)), { weight: 700, track: -0.02 });
+  rise(g, COPY.rateSuffix, cx + 10, base, 64, C.ink, smooth(prog(t, 84, 12)), { weight: 700, track: -0.02 });
   g.restore();
 }
 
@@ -459,28 +475,29 @@ function drawDigits(g, t, D, cap) {
   if (c.parent === grp) { grp.remove(c); scene.add(c); }
 }
 
-/* ---------------- scene 4: grid (f192–244) ---------------- */
-const PULL = 192;
+/* ---------------- scene 4: grid (6.2–9.7 s, "VTB.az … onlayn … filialda … sürətli rəsmiləşdir") ---------------- */
+const PULL = 186, EXP = 292;
 function gridRects(t) {
   const c2 = { x: SLOT.amount.x + GW / 2, y: SLOT.amount.y + GH / 2 }, cb = { x: BIG.x + BIG.w / 2, y: BIG.y + BIG.h / 2 }, k0 = BIG.w / GW;
   const startOf = R => ({ x: cb.x + (R.x - c2.x) * k0, y: cb.y + (R.y - c2.y) * k0, w: R.w * k0, h: R.h * k0 });
-  const lags = { amount: 0, rate: 3, portrait: 2, com: 4, term: 5, online: 7 }, r = {};
+  const lags = { amount: 0, rate: 3, portrait: 2, online: 4, branch: 5, fast: 7 }, r = {};
   for (const id in SLOT) { const s = spring(t - PULL - lags[id], 0.24, 0.8); r[id] = { R: lerpR(startOf(SLOT[id]), SLOT[id], s), s }; }
   return r;
 }
+const expandOf = t => spring(t - EXP, 0.22, 0.9);
 function pushOut(R, t, center) {
-  const p = accel(prog(t, 244, 14)); if (p <= 0) return R;
+  const p = accel(prog(t, EXP, 14)); if (p <= 0) return R;
   const dx = R.x + R.w / 2 - center.x, dy = R.y + R.h / 2 - center.y, d = Math.hypot(dx, dy) || 1;
   return { ...R, x: R.x + dx / d * 1700 * p, y: R.y + dy / d * 1700 * p };
 }
 const GRID_OBJ = {
-  rate:   { o: () => O.pct,    size: 230, pos: [372, 248], rot: [0.25, -0.5, 0.18], color: () => C.tRate },
-  com:    { o: () => O.shield, size: 200, pos: [374, 250], rot: [0, -0.35, -0.12],  color: () => C.tCom },
-  term:   { o: () => O.cal,    size: 190, pos: [374, 254], rot: [0.15, -0.45, 0.1], color: () => C.tTerm },
-  online: { o: () => O.phone,  size: 260, pos: [384, 244], rot: [0.2, -0.55, 0.22], color: () => C.navy },
+  rate:   { o: () => O.pct,   size: 230, pos: [372, 248], rot: [0.25, -0.5, 0.18], color: () => C.tRate },
+  online: { o: () => O.phone, size: 260, pos: [384, 244], rot: [0.2, -0.55, 0.22], color: () => C.tTerm },
+  branch: { o: () => O.pin,   size: 210, pos: [374, 250], rot: [0.1, -0.4, 0],     color: () => C.tCom },
+  fast:   { o: () => O.bolt,  size: 230, pos: [380, 250], rot: [0.15, -0.5, -0.2], color: () => C.navy },
 };
 function drawGridTile(g, t, id, R, ph) {
-  const k = R.w / GW, idl = idle(t, ph, 0.8), dark = id === "online";
+  const k = R.w / GW, idl = idle(t, ph, 0.8), dark = id === "fast";
   if (id === "portrait") {
     g.save(); softShadow(g, k); g.fillStyle = "#fff"; rr(g, R.x, R.y, R.w, R.h, 44 * k); g.fill(); g.restore();
     drawFootage(g, "portrait", R, 44 * k, 1.0, [0.5, 0.38]);
@@ -488,7 +505,9 @@ function drawGridTile(g, t, id, R, ph) {
     const spec = GRID_OBJ[id], L = COPY.grid[id];
     tileBase(g, R, spec.color(), k);
     g.save(); rr(g, R.x, R.y, R.w, R.h, 44 * k); g.clip();
-    obj3D(g, spec.o(), R.x + spec.pos[0] * k, R.y + spec.pos[1] * k + idl.bob * k, spec.size * k, [spec.rot[0] + idl.rx, spec.rot[1] + idl.ry, spec.rot[2]], { clipR: R, radius: 44 * k });
+    // object pops when its line is spoken (tick time), then floats
+    const ps = id === "rate" ? 1 : lerp(0.55, 1, spring(t - TICKS[id] + 4, 0.3, 0.5));
+    obj3D(g, spec.o(), R.x + spec.pos[0] * k, R.y + spec.pos[1] * k + idl.bob * k, spec.size * k * ps, [spec.rot[0] + idl.rx, spec.rot[1] + idl.ry - (1 - ps) * 2, spec.rot[2]], { clipR: R, radius: 44 * k });
     font(g, 34 * k, 800, -0.02); g.fillStyle = dark ? "#fff" : C.ink; g.textAlign = "left"; g.fillText(L[0], R.x + 36 * k, R.y + 76 * k);
     font(g, 28 * k, 600, 0); g.fillStyle = dark ? "rgba(255,255,255,0.75)" : C.inkSoft; g.fillText(L[1], R.x + 36 * k, R.y + 116 * k);
     g.restore();
@@ -496,56 +515,55 @@ function drawGridTile(g, t, id, R, ph) {
   checkbox(g, R.x + R.w - 64 * k, R.y + 24 * k, k, t, TICKS[id], dark ? "dark" : "light");
 }
 function drawScene4(g, t) {
-  const G = gridRects(t), c5 = { x: SLOT.online.x + GW / 2, y: SLOT.online.y + GH / 2 };
-  const ph = { portrait: 0, rate: 0.7, com: 1.9, term: 3.3, online: 4.4 };
-  for (const id of ["portrait", "rate", "com", "term"]) drawGridTile(g, t, id, pushOut(G[id].R, t, c5), ph[id]);
+  const G = gridRects(t), c5 = { x: SLOT.fast.x + GW / 2, y: SLOT.fast.y + GH / 2 };
+  const ph = { portrait: 0, rate: 0.7, online: 1.9, branch: 3.3, fast: 4.4 };
+  for (const id of ["portrait", "rate", "online", "branch"]) drawGridTile(g, t, id, pushOut(G[id].R, t, c5), ph[id]);
   { const Ra = pushOut(G.amount.R, t, c5); drawAmount(g, t, BIG, Ra, G.amount.s); }
-  { // navy tile expands into the end card
-    const R0 = G.online.R, ex = spring(t - 244, 0.22, 0.9);
-    if (ex <= 0) drawGridTile(g, t, "online", R0, ph.online);
+  { // navy "Sürətli" tile expands into the end card
+    const R0 = G.fast.R, ex = expandOf(t);
+    if (ex <= 0) drawGridTile(g, t, "fast", R0, ph.fast);
     else {
       const R = lerpR(R0, { x: 0, y: 0, w: W, h: H }, ex);
       g.save(); g.fillStyle = C.navy; rr(g, R.x, R.y, R.w, R.h, lerp(44, 0, clamp(ex))); g.fill(); g.restore();
-      g.save(); g.globalAlpha = 1 - smooth(prog(t, 244, 6)); drawGridTile(g, t, "online", R0, ph.online); g.restore();
+      g.save(); g.globalAlpha = 1 - smooth(prog(t, EXP, 6)); drawGridTile(g, t, "fast", R0, ph.fast); g.restore();
     }
   }
-  const hp = accel(prog(t, 244, 12)) * 800;
-  rise(g, COPY.headline[0], 64, 360 - hp, 100, C.ink, smooth(prog(t, 202, 14)), { weight: 800, track: -0.03 });
-  rise(g, COPY.headline[1], 64, 460 - hp, 100, C.ink, smooth(prog(t, 206, 14)), { weight: 800, track: -0.03 });
+  // headline: line 1 on "onlayn və ya … filialda" (7.4 s), line 2 on "sürətli rəsmiləşdir" (9.1 s)
+  const hp = accel(prog(t, EXP, 12)) * 800;
+  let hs = 86; font(g, hs, 800, -0.03); while (Math.max(...COPY.headline.map(l => g.measureText(l).width)) > 952) { hs -= 2; font(g, hs, 800, -0.03); }
+  rise(g, COPY.headline[0], 64, 362 - hp, hs, C.ink, smooth(prog(t, 220, 14)), { weight: 800, track: -0.03 });
+  rise(g, COPY.headline[1], 64, 456 - hp, hs, C.ink, smooth(prog(t, 272, 14)), { weight: 800, track: -0.03 });
 }
 
-/* ---------------- scene 5: end card ---------------- */
+/* ---------------- scene 5: end card (9.7–14.4 s, "… 986 qısa nömrəsi ilə əlaqə saxla") ---------------- */
 function drawScene5(g, t) {
-  if (t < 248) return;
-  if (t >= 262 || spring(t - 244, 0.22, 0.9) >= 0.98) { g.fillStyle = C.navy; g.fillRect(0, 0, W, H); }
-  g.save(); g.globalAlpha = smooth(prog(t, 248, 14));
+  if (t < EXP + 4) return;
+  if (t >= EXP + 18 || expandOf(t) >= 0.98) { g.fillStyle = C.navy; g.fillRect(0, 0, W, H); }
+  g.save(); g.globalAlpha = smooth(prog(t, EXP + 4, 14));
   for (const [px, py, r, a, per, ph] of [[300, 520, 620, 0.35, 160, 0], [820, 1420, 700, 0.28, 190, 2]]) {   // drifting light
     const x = px + 60 * wave(t, per, ph), y = py + 50 * wave(t, per * 1.3, ph + 1);
     const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(0,159,223,${a})`); gr.addColorStop(1, "rgba(0,159,223,0)");
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
   g.restore();
-  const ls = spring(t - 250, 0.3, 0.6);
+  const ls = spring(t - 300, 0.3, 0.6);   // logo stand-in
   if (ls > 0) {
-    g.save(); g.translate(540, 720); g.scale(lerp(0.8, 1, ls), lerp(0.8, 1, ls));
-    rise(g, COPY.logo, 0, 80, 260, "#fff", smooth(prog(t, 250, 12)), { weight: 800, align: "center", track: -0.03 });
-    const rp = spring(t - 256, 0.3, 0.8); if (rp > 0) { g.fillStyle = C.azure; rr(g, -200 * rp, 130, 400 * rp, 18, 9); g.fill(); }
+    g.save(); g.translate(540, 620); g.scale(lerp(0.8, 1, ls), lerp(0.8, 1, ls));
+    rise(g, COPY.logo, 0, 80, 230, "#fff", smooth(prog(t, 300, 12)), { weight: 800, align: "center", track: -0.03 });
+    const rp = spring(t - 306, 0.3, 0.8); if (rp > 0) { g.fillStyle = C.azure; rr(g, -180 * rp, 125, 360 * rp, 16, 8); g.fill(); }
     g.restore();
   }
-  rise(g, COPY.tagline[0], 540, 1010, 76, "#fff", smooth(prog(t, 260, 14)), { weight: 600, align: "center" });
-  rise(g, COPY.tagline[1], 540, 1100, 76, "#fff", smooth(prog(t, 263, 14)), { weight: 600, align: "center" });
-  const cs = spring(t - 268, 0.32, 0.6);
-  if (cs > 0) {
-    font(g, 52, 800, -0.02); const pw = g.measureText(COPY.cta).width + 100;
-    g.save(); g.translate(540, 1250); g.scale(lerp(0.7, 1, cs), lerp(0.7, 1, cs)); g.globalAlpha = clamp(cs * 2);
-    g.fillStyle = "#fff"; rr(g, -pw / 2, -54, pw, 108, 54); g.fill(); g.fillStyle = C.navy; g.textAlign = "center"; g.fillText(COPY.cta, 0, 19); g.restore();
-  }
-  const la = smooth(prog(t, 256, 14));
+  rise(g, COPY.info, 540, 930, 56, "#fff", smooth(prog(t, 311, 14)), { weight: 600, align: "center", alpha: 0.85 });   // 10.36 s
+  // glossy 3D "986" springs in on the word (11.66 s), then floats
+  const ns = spring(t - 350, 0.28, 0.55);
+  if (ns > 0) { const id = idle(t, 2.2, 0.7); obj3D(g, O.n986, 540, 1140 + id.bob, 560 * ns, [0.12 + id.rx, id.ry * 0.8 - (1 - ns) * 1.8, 0], { shadow: false }); }
+  rise(g, COPY.shortNum, 540, 1330, 44, "#fff", smooth(prog(t, 378, 14)), { weight: 600, align: "center", alpha: 0.8 });   // 12.6 s
+  const la = smooth(prog(t, 320, 14));
   if (la > 0) {
     g.save(); g.globalAlpha = la * 0.7; font(g, 26, 600, 0); g.fillStyle = "#fff"; g.textAlign = "center";
     const lines = []; let line = "";
     for (const w of COPY.legal.split(" ")) { const tt = line ? line + " " + w : w; if (g.measureText(tt).width > 900) { lines.push(line); line = w; } else line = tt; }
-    lines.push(line); lines.forEach((l, i) => g.fillText(l, 540, 1400 + i * 36)); g.restore();
+    lines.push(line); lines.forEach((l, i) => g.fillText(l, 540, 1420 + i * 36)); g.restore();
   }
 }
 
@@ -553,12 +571,12 @@ function drawScene5(g, t) {
 function drawAt(g, t) {
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none";
   g.fillStyle = C.canvas; g.fillRect(0, 0, W, H);
-  if (t < 156) drawScene12(g, t);
+  if (t < 162) drawScene12(g, t);
   if (t >= SCROLL && t < PULL) { const R = { ...BIG, y: BIG.y + scrollY(t, 3) + H }; drawAmount(g, t, R, R, 0); }
-  if (t >= PULL && t < 262) drawScene4(g, t);
-  if (t >= 244) {
+  if (t >= PULL && t < EXP + 20) drawScene4(g, t);
+  if (t >= EXP) {
     g.save();
-    if (t < 262) { const R = lerpR(gridRects(t).online.R, { x: 0, y: 0, w: W, h: H }, spring(t - 244, 0.22, 0.9)); rr(g, R.x, R.y, R.w, R.h, lerp(44, 0, clamp(spring(t - 244, 0.22, 0.9)))); g.clip(); }
+    if (t < EXP + 18) { const ex = expandOf(t), R = lerpR(gridRects(t).fast.R, { x: 0, y: 0, w: W, h: H }, ex); rr(g, R.x, R.y, R.w, R.h, lerp(44, 0, clamp(ex))); g.clip(); }
     drawScene5(g, t); g.restore();
   }
 }
@@ -570,8 +588,8 @@ function renderFrame(f, sub = 1) {
   out.setTransform(1, 0, 0, 1, 0, 0); out.globalAlpha = 1;
   if (sub <= 1) { drawAt(ctx, f); out.drawImage(buf, 0, 0); }
   else {
-    // more samples on the fast moves (scroll, pull-back, end-card expand) so the blur is smooth, not strobed
-    const fast = (f >= 126 && f <= 158) || (f >= 190 && f <= 214) || (f >= 242 && f <= 262) || (f >= 38 && f <= 58);
+    // more samples on the fast moves (shrink, scroll, pull-back, end-card expand) so the blur is smooth, not strobed
+    const fast = (f >= 18 && f <= 40) || (f >= 130 && f <= 162) || (f >= 184 && f <= 208) || (f >= 290 && f <= 312);
     const n = fast ? Math.max(sub, 12) : sub, shutter = 0.4;
     for (let i = 0; i < n; i++) {
       drawAt(ctx, Math.max(0, f + (i / (n - 1) - 0.5) * shutter));

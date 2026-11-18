@@ -22,7 +22,7 @@ const has = f => args.includes(f);
 const arg = f => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
 
 // Style frames: one per scene, each on a held moment.
-const STILLS = { "1-person": 30, "2-offer": 120, "3-amount": 186, "4-grid": 240, "5-end-card": 296 };
+const STILLS = { "1-person": 12, "2-offer": 128, "3-amount": 180, "4-grid": 286, "5-end-card": 420 };
 const SUB = +(arg("--sub") || 4);   // sub-frames per frame for motion blur
 
 const MIME = { ".html": "text/html", ".woff2": "font/woff2", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".js": "text/javascript", ".woff": "font/woff" };
@@ -65,14 +65,19 @@ if (arg("--frames")) {
     const wav = path.join(tmp, "sfx.wav");
     execFileSync("python3", ["-I", path.join(DIR, "sfx.py"), wav], { stdio: "inherit" });
     const mp4 = path.join(OUT, "vtb-cash-loan-1080x1920-30fps.mp4");
-    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"), "-i", wav,
+    const dur = String(FRAMES / FPS);
+    // voiceover on top, SFX tucked underneath
+    const audio = ["-i", wav, "-i", path.join(DIR, "audio", "voiceover.wav"),
+      "-filter_complex", "[1:a]volume=0.32[s];[2:a]aresample=48000,volume=1.0[v];[s][v]amix=inputs=2:normalize=0:duration=longest,alimiter=limit=0.95[a]",
+      "-map", "0:v", "-map", "[a]"];
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"), ...audio,
       "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-profile:v", "high", "-r", String(FPS),
-      "-c:a", "aac", "-b:a", "192k", "-t", "10", "-movflags", "+faststart", mp4], { stdio: "inherit" });
+      "-c:a", "aac", "-b:a", "192k", "-t", dur, "-movflags", "+faststart", mp4], { stdio: "inherit" });
     console.log("wrote", path.relative(DIR, mp4));
     if (has("--prores")) {
       const mov = path.join(OUT, "vtb-cash-loan-1080x1920-30fps-prores422.mov");
-      execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"), "-i", wav,
-        "-c:v", "prores_ks", "-profile:v", "2", "-pix_fmt", "yuv422p10le", "-c:a", "pcm_s16le", "-t", "10", mov], { stdio: "inherit" });
+      execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"),
+        ...audio, "-c:v", "prores_ks", "-profile:v", "2", "-pix_fmt", "yuv422p10le", "-c:a", "pcm_s16le", "-t", dur, mov], { stdio: "inherit" });
       console.log("wrote", path.relative(DIR, mov));
     }
     fs.rmSync(tmp, { recursive: true, force: true });
