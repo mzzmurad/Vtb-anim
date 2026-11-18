@@ -19,9 +19,9 @@ Preview: `npx serve films/vtb-cash-loan` (or any static server), then open `/fil
 - **Footage:** the worker clip replaces the placeholder: full frame, then the top card, then the portrait tile.
 - **Colour:** the client gradient `#0250BF → #67C6FF` is the background throughout, with white tiles on it. The "Sürətli" tile grows into VTB navy `#04378F`, which is the first frame of the logo sting.
 - **Type:** VTB Group (Book, Demi Bold, Bold, Extra Bold) for all text and the 3D numerals, set about 1.5% tighter.
-- **3D objects:** glossy renders generated with Higgsfield (GPT Image 2.6, high 2K, transparent background), stored in `assets/objects/` as `pct`, `shield`, `coin`, `amount`, `phone`, `pin` and `bolt`. They animate in 2D with springs, float, tilt and breathe; the "100 000" drops in and the coin rolls in. They replace the hand-built three.js models, which are still in the code but no longer used.
+- **3D objects:** glossy renders generated with Higgsfield (GPT Image 2.6, high 2K, transparent background), stored in `assets/objects/` as `pct`, `shield`, `coin`, `amount`, `phone`, `pin` and `bolt`. The phone screen shows an application form, not a card, because VTB has no card product here. They animate in 2D with springs, float, tilt and breathe; the "100 000" drops in and the coin rolls in. They replace the hand-built three.js models, which are still in the code but no longer used.
 - **"Zaminsiz kredit"** sits on its own white tile like the other conditions.
-- **986 card removed:** its voiceover line ("Daha ətraflı məlumat üçün 986…") is dropped too. The legal line now sits under the grid.
+- **986 card removed:** its voiceover line ("Daha ətraflı məlumat üçün 986…") is dropped too. There is no legal line on screen; add one when VTB legal supplies the text.
 
 | Film time | Voiceover phrase | On screen |
 |---|---|---|

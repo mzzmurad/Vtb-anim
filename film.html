@@ -81,17 +81,16 @@ function bgGradient(g) { const gr = g.createLinearGradient(0, 0, 0, H); gr.addCo
 //      986 qısa nömrəsi ilə əlaqə saxla."   (on screen the profession is oil & mining workers, per client)
 const COPY = {
   audience: "Neft və mədənçıxarma işçilərinə",
-  rateTitle: "İllik faiz", rate: "9,9", rateSuffix: "%-dən",
+  rateTitle: "İllik faiz", rate: "9.9", rateSuffix: "%-dən",
   lockup: ["Zaminsiz", "kredit"],
   amountTitle: "Kredit məbləği", amount: "100 000", amountLabel: ["AZN-dək", "nağd kredit"],
   headline: ["Onlayn və ya filialda", "sürətli rəsmiləşdir"],
   grid: {
-    rate:   ["9,9%-dən", "illik faiz"],
+    rate:   ["9.9%-dən", "illik faiz"],
     online: ["Onlayn", "vtb.az saytından"],
     branch: ["Filialda", "ən yaxın ünvanda"],
     fast:   ["Sürətli", "rəsmiləşdirmə"],
   },
-  legal: "Kredit illik 9,9%-dən, 100 000 AZN-dək, zaminsiz verilir. Ətraflı şərtlər vtb.az saytında və 986 məlumat mərkəzində. [Yekun hüquqi mətn VTB tərəfindən təqdim olunacaq]",
 };
 const FOOTAGE_FRAMES = 150;   // footage/worker.mp4 → footage/frames/0001.jpg… (render.mjs extracts them)
 
@@ -505,13 +504,6 @@ function drawScene4(g, t) {
     }
   }
   // headline: line 1 on "onlayn və ya … filialda" (7.4 s), line 2 on "sürətli rəsmiləşdir" (9.1 s)
-  const lg = smooth(prog(t, 228, 14)) * (1 - accel(prog(t, EXP, 10)));
-  if (lg > 0) {
-    g.save(); g.globalAlpha = lg * 0.8; font(g, 24, 400, 0); g.fillStyle = "#fff"; g.textAlign = "center";
-    const lines = []; let line = "";
-    for (const w of COPY.legal.split(" ")) { const tt = line ? line + " " + w : w; if (g.measureText(tt).width > 940) { lines.push(line); line = w; } else line = tt; }
-    lines.push(line); lines.forEach((l, k) => g.fillText(l, 540, 1566 + k * 32)); g.restore();
-  }
   const hp = accel(prog(t, EXP, 12)) * 800;
   let hs = 86; font(g, hs, 800, -0.03); while (Math.max(...COPY.headline.map(l => g.measureText(l).width)) > 952) { hs -= 2; font(g, hs, 800, -0.03); }
   rise(g, COPY.headline[0], 64, 362 - hp, hs, "#fff", smooth(prog(t, 220, 14)), { weight: 800, track: -0.03 });
