@@ -65,11 +65,23 @@ if (arg("--frames")) {
     const wav = path.join(tmp, "sfx.wav");
     execFileSync("python3", ["-I", path.join(DIR, "sfx.py"), wav], { stdio: "inherit" });
     const mp4 = path.join(OUT, "vtb-cash-loan-1080x1920-30fps.mp4");
-    const dur = String(FRAMES / FPS);
-    // voiceover on top, SFX tucked underneath
-    const audio = ["-i", wav, "-i", path.join(DIR, "audio", "voiceover.wav"),
-      "-filter_complex", "[1:a]volume=0.32[s];[2:a]aresample=48000,volume=1.0[v];[s][v]amix=inputs=2:normalize=0:duration=longest,alimiter=limit=0.95[a]",
-      "-map", "0:v", "-map", "[a]"];
+    // ---- final assembly: film frames + VTB logo sting; voiceover split into phrases around the reading holds
+    const STING = path.join(DIR, "assets", "vtb-logo-sting.mp4"), STING_LEN = 2.1;
+    const filmLen = FRAMES / FPS, total = filmLen + STING_LEN;
+    // [from, to] in voiceover.wav → start time in the film (s). Cuts sit in pauses (4.72, 10.42) or a word gap (5.99).
+    const VO = [[0, 4.72, 0], [4.72, 5.99, 6.22], [5.99, 10.42, 8.95], [10.42, 14.4, 14.85]];
+    const voF = VO.map(([a, b, at], k) => `[v${k}]atrim=${a}:${b},asetpts=PTS-STARTPTS,afade=t=in:d=0.01,afade=t=out:st=${(b - a - 0.012).toFixed(3)}:d=0.012,adelay=${Math.round(at * 1000)}:all=1[c${k}]`);
+    const filter = [
+      `[0:v]format=yuv420p,setsar=1[fv]`,
+      `[3:v]trim=0:${STING_LEN},setpts=PTS-STARTPTS,fps=${FPS},scale=1080:1920,format=yuv420p,setsar=1[sv]`,
+      `[fv][sv]concat=n=2:v=1:a=0[v]`,
+      `[2:a]aresample=48000,asplit=${VO.length}${VO.map((_, k) => `[v${k}]`).join("")}`,
+      ...voF,
+      `[1:a]volume=0.32[s]`,
+      `[s]${VO.map((_, k) => `[c${k}]`).join("")}amix=inputs=${VO.length + 1}:normalize=0:duration=longest,apad,atrim=0:${total},alimiter=limit=0.95[a]`,
+    ].join(";");
+    const audio = ["-i", wav, "-i", path.join(DIR, "audio", "voiceover.wav"), "-i", STING, "-filter_complex", filter, "-map", "[v]", "-map", "[a]"];
+    const dur = total.toFixed(3);
     execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"), ...audio,
       "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", "-profile:v", "high", "-r", String(FPS),
       "-c:a", "aac", "-b:a", "192k", "-t", dur, "-movflags", "+faststart", mp4], { stdio: "inherit" });

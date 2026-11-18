@@ -33,14 +33,14 @@
   <canvas id="gl" width="1080" height="1920"></canvas>
   <div class="ui">
     <button id="play">Pause</button>
-    <input id="scrub" type="range" min="0" max="431" value="0">
+    <input id="scrub" type="range" min="0" max="575" value="0">
     <span id="tc">f000 · 0.00s</span>
     <label><input id="safe" type="checkbox"> safe area</label>
   </div>
 </div>
 <script type="module">
 /* ============================================================
-   VTB Bank — Cash loan · 14.4 s vertical (1080×1920, 30 fps, 432 frames), timed to the voiceover
+   VTB Bank — Cash loan · 21.3 s vertical (1080×1920, 30 fps): 19.2 s film + 2.1 s VTB logo sting, timed to the voiceover
    Style: soft app tiles (Yandex / WB-bank screens) with glossy 3D objects
    cropped at the tile corner. Motion: springs + continuous idle float,
    real motion blur (sub-frame accumulation) in the master render.
@@ -53,11 +53,17 @@ import { TTFLoader } from "three/addons/loaders/TTFLoader.js";
 import { Font } from "three/addons/loaders/FontLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const W = 1080, H = 1920, FPS = 30, FRAMES = 432;   // 14.4 s — matches the voiceover
+const W = 1080, H = 1920, FPS = 30, FRAMES = 576;   // 19.2 s of film; render.mjs appends the VTB logo sting (2.1 s)
+
+/* Story time vs real time: the animation is written in "story" frames; HOLDS insert still moments
+   (objects keep floating) after each condition so it can be read. [story frame, extra real frames] */
+const HOLDS = [[130, 50], [184, 41], [288, 44]];
+function toStory(t) { let s = t; for (const [hs, ex] of HOLDS) { if (s <= hs) break; if (s <= hs + ex) return hs; s -= ex; } return s; }
+let RT = 0;   // real time (frames) — drives the idle float so held moments stay alive
 
 // ---- Palette: VTB blues (approximate — swap for brandbook values) + soft tile tints ----
 const C = {
-  navy: "#0A2973", azure: "#009FDF", gold: "#F2B544",
+  navy: "#04378F", azure: "#009FDF", gold: "#F2B544",
   ink: "#14213D", inkSoft: "#5B6B85",
   canvas: "#F1F4F8", white: "#FFFFFF",
   tRate: "#E2F0FB", tCom: "#E9E8FC", tTerm: "#E3ECFA", tAmount: "#E6F3FC",
@@ -318,7 +324,7 @@ function obj3D(g, o, cx, cy, size, rot = [0, 0, 0], { clipR = null, radius = 44,
   blit(g, r); g.restore();
 }
 // idle float: gentle yaw sway, pitch and bob — keeps every object alive
-const idle = (t, ph, amp = 1) => ({ rx: 0.1 * amp * wave(t, 140, ph), ry: 0.22 * amp * wave(t, 110, ph + 1), bob: 7 * amp * wave(t, 84, ph + 2) });
+const idle = (_t, ph, amp = 1) => ({ rx: 0.1 * amp * wave(RT, 140, ph), ry: 0.22 * amp * wave(RT, 110, ph + 1), bob: 7 * amp * wave(RT, 84, ph + 2) });
 
 /* ---------------- tile chrome ---------------- */
 function tileBase(g, R, color, s = 1, a = 1) { g.save(); g.globalAlpha *= a; softShadow(g, s); g.fillStyle = color; rr(g, R.x, R.y, R.w, R.h, 44 * s); g.fill(); g.restore(); }
@@ -467,7 +473,7 @@ function drawDigits(g, t, D, cap) {
   if (t >= 156) {   // coin rolls in from the right and leans on the last zero
     const sp = spring(t - 156, 0.2, 0.82), xf = width / 2 + shiftX + coinR * 0.66, x = lerp(xf + 5.5, xf, sp);
     grp.add(c); c.position.set(x, coinR * 0.72, 0.15); c.scale.setScalar(coinR * 2);
-    c.rotation.set(0, 0.45 + 0.15 * wave(t, 120, 1), (xf - x) / coinR + lerp(0, 0.26, smooth(prog(t, 164, 14))), "YZX");
+    c.rotation.set(0, 0.45 + 0.15 * wave(RT, 120, 1), (xf - x) / coinR + lerp(0, 0.26, smooth(prog(t, 164, 14))), "YZX");
   }
   const r = renderView(grp, D, t >= 156 ? c : null);
   g.save(); g.filter = `blur(${D.h * 0.04}px)`; g.fillStyle = "rgba(10,41,115,0.11)"; g.beginPath(); g.ellipse(D.x + D.w / 2, D.y + D.h * 0.7, D.w * 0.36, D.h * 0.04, 0, 0, 7); g.fill(); g.restore();
@@ -535,40 +541,39 @@ function drawScene4(g, t) {
   rise(g, COPY.headline[1], 64, 456 - hp, hs, C.ink, smooth(prog(t, 272, 14)), { weight: 800, track: -0.03 });
 }
 
-/* ---------------- scene 5: end card (9.7–14.4 s, "… 986 qısa nömrəsi ilə əlaqə saxla") ---------------- */
+/* ---------------- scene 5: info card ("Daha ətraflı məlumat üçün 986 qısa nömrəsi ilə əlaqə saxla") ----------------
+   Ends on plain VTB navy (#04378F, sampled from the logo sting) so the cut into the sting is seamless. */
+const OUTRO = 427;   // story frame where the info card clears for the sting
 function drawScene5(g, t) {
   if (t < EXP + 4) return;
   if (t >= EXP + 18 || expandOf(t) >= 0.98) { g.fillStyle = C.navy; g.fillRect(0, 0, W, H); }
-  g.save(); g.globalAlpha = smooth(prog(t, EXP + 4, 14));
-  for (const [px, py, r, a, per, ph] of [[300, 520, 620, 0.35, 160, 0], [820, 1420, 700, 0.28, 190, 2]]) {   // drifting light
-    const x = px + 60 * wave(t, per, ph), y = py + 50 * wave(t, per * 1.3, ph + 1);
-    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(0,159,223,${a})`); gr.addColorStop(1, "rgba(0,159,223,0)");
+  const gone = accel(prog(t, OUTRO, 12));            // everything lifts away before the sting
+  g.save(); g.globalAlpha = smooth(prog(t, EXP + 4, 14)) * (1 - gone);
+  for (const [px, py, r, a, per, ph] of [[300, 520, 620, 0.32, 160, 0], [820, 1420, 700, 0.26, 190, 2]]) {   // drifting light
+    const x = px + 60 * wave(RT, per, ph), y = py + 50 * wave(RT, per * 1.3, ph + 1);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(21,183,249,${a})`); gr.addColorStop(1, "rgba(21,183,249,0)");
     g.fillStyle = gr; g.fillRect(0, 0, W, H);
   }
   g.restore();
-  const ls = spring(t - 300, 0.3, 0.6);   // logo stand-in
-  if (ls > 0) {
-    g.save(); g.translate(540, 620); g.scale(lerp(0.8, 1, ls), lerp(0.8, 1, ls));
-    rise(g, COPY.logo, 0, 80, 230, "#fff", smooth(prog(t, 300, 12)), { weight: 800, align: "center", track: -0.03 });
-    const rp = spring(t - 306, 0.3, 0.8); if (rp > 0) { g.fillStyle = C.azure; rr(g, -180 * rp, 125, 360 * rp, 16, 8); g.fill(); }
-    g.restore();
-  }
-  rise(g, COPY.info, 540, 930, 56, "#fff", smooth(prog(t, 311, 14)), { weight: 600, align: "center", alpha: 0.85 });   // 10.36 s
-  // glossy 3D "986" springs in on the word (11.66 s), then floats
-  const ns = spring(t - 350, 0.28, 0.55);
-  if (ns > 0) { const id = idle(t, 2.2, 0.7); obj3D(g, O.n986, 540, 1140 + id.bob, 560 * ns, [0.12 + id.rx, id.ry * 0.8 - (1 - ns) * 1.8, 0], { shadow: false }); }
-  rise(g, COPY.shortNum, 540, 1330, 44, "#fff", smooth(prog(t, 378, 14)), { weight: 600, align: "center", alpha: 0.8 });   // 12.6 s
+  if (gone >= 1) return;
+  g.save(); g.globalAlpha = 1 - gone; g.translate(0, -180 * gone);
+  rise(g, COPY.info, 540, 760, 60, "#fff", smooth(prog(t, 311, 14)), { weight: 600, align: "center", alpha: 0.9 });
+  const ns = spring(t - 348, 0.28, 0.55);            // glossy 3D "986" lands on the word
+  if (ns > 0) { const id = idle(t, 2.2, 0.7); obj3D(g, O.n986, 540, 980 + id.bob, 620 * ns, [0.12 + id.rx, id.ry * 0.8 - (1 - ns) * 1.8, 0], { shadow: false }); }
+  rise(g, COPY.shortNum, 540, 1190, 48, "#fff", smooth(prog(t, 375, 14)), { weight: 600, align: "center", alpha: 0.85 });
   const la = smooth(prog(t, 320, 14));
   if (la > 0) {
-    g.save(); g.globalAlpha = la * 0.7; font(g, 26, 600, 0); g.fillStyle = "#fff"; g.textAlign = "center";
+    g.save(); g.globalAlpha *= la * 0.72; font(g, 26, 600, 0); g.fillStyle = "#fff"; g.textAlign = "center";
     const lines = []; let line = "";
     for (const w of COPY.legal.split(" ")) { const tt = line ? line + " " + w : w; if (g.measureText(tt).width > 900) { lines.push(line); line = w; } else line = tt; }
-    lines.push(line); lines.forEach((l, i) => g.fillText(l, 540, 1420 + i * 36)); g.restore();
+    lines.push(line); lines.forEach((l, k) => g.fillText(l, 540, 1410 + k * 36)); g.restore();
   }
+  g.restore();
 }
 
 /* ---------------- one instant ---------------- */
-function drawAt(g, t) {
+function drawAt(g, tReal) {
+  RT = tReal; const t = toStory(tReal);
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none";
   g.fillStyle = C.canvas; g.fillRect(0, 0, W, H);
   if (t < 162) drawScene12(g, t);
@@ -589,7 +594,8 @@ function renderFrame(f, sub = 1) {
   if (sub <= 1) { drawAt(ctx, f); out.drawImage(buf, 0, 0); }
   else {
     // more samples on the fast moves (shrink, scroll, pull-back, end-card expand) so the blur is smooth, not strobed
-    const fast = (f >= 18 && f <= 40) || (f >= 130 && f <= 162) || (f >= 184 && f <= 208) || (f >= 290 && f <= 312);
+    const st = toStory(f);
+    const fast = (st >= 18 && st <= 40) || (st > 130 && st <= 162) || (st > 184 && st <= 208) || (st > 288 && st <= 312) || (st >= OUTRO && st <= OUTRO + 12);
     const n = fast ? Math.max(sub, 12) : sub, shutter = 0.4;
     for (let i = 0; i < n; i++) {
       drawAt(ctx, Math.max(0, f + (i / (n - 1) - 0.5) * shutter));
