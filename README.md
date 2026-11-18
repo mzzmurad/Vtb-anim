@@ -6,18 +6,18 @@ Working animatic of the motion brief (Nov 18, 2026). The film is drawn in code, 
 |---|---|
 | `out/vtb-cash-loan-1080x1920-30fps.mp4` | 10.0 s, 300 frames, H.264 + temp audio |
 | `out/style-frames/scene-*.png` | 5 style frames, 1080×1920, one per scene |
-| `film.html` | The film. Open it in a browser (served over http) to play or scrub it. `?f=120` opens on a frame. Includes a safe-area overlay |
+| `film.html` | The film (2D canvas + three.js; `vendor/` holds three.js r170, MIT). Open it in a browser (served over http) to play or scrub it. `?f=120` opens on a frame. Includes a safe-area overlay |
 | `render.mjs` | `node render.mjs` renders the MP4 and the stills. Also takes `--stills`, `--frames 0,60,120` and `--prores` (ProRes 422 .mov) |
 | `sfx.py` | Temp sound: synthesised SFX on the brief's cue frames plus a quiet 120 BPM guide pulse |
 
 Preview: `npx serve films/vtb-cash-loan` (or any static server), then open `/film.html`.
 
-## Built to the brief
-- Five scenes change at f60 / 135 / 195 / 240, all on 120 BPM beats. There are no cuts or crossfades: every transition is a card or the camera moving.
-- Easing: entrances use cubic-bezier(0.16,1,0.3,1). Exits are ease-in over 8–10 f. Pops go 85→103→100 % over 10 f. Siblings are staggered by 3 f. Text appears with mask wipes (8 f per line). The camera moves over 15 f ease-in-out, and the scroll has 6–8 px of vertical motion blur.
-- Layout: 64 px margins. Text stays inside y 250–1520. Corners are 48 px, gaps 32 px, and there is one shadow (16 px down, 40 blur, 8 % navy). The checkbox is 40 px and the pill label 36 px.
-- 3D objects: glossy amount numerals with azure depth, a gold manat coin (rolls in, leans, gleams) and a glossy "0%" for the benefit.
-- Type: Inter Tight 800/600 (OFL) with the latin-ext subset. Azerbaijani caps are typed by hand (KOMİSSİYASIZ, KREDİT).
+## Look and motion (v2)
+- **Style:** soft app tiles in the manner of the Yandex Pay / Go and WB-bank screens. Each tile has a small header with an icon, a big number or two-line label, and a glossy 3D object cropped at its corner. Tiles use VTB-blue and lavender tints on a light canvas, and the end card is navy.
+- **3D:** real 3D objects (three.js, glossy soft plastic with a studio environment): extruded "100 000" numerals, a gold manat coin, a "%" sign, a shield, a calendar and a phone with a VTB app screen.
+- **Motion:** spring physics instead of fixed easing curves. Every object keeps floating, swaying and bobbing. Tiles trail each other on the scroll (parallax). Digits fall and flip in, and the coin rolls in. The amount card morphs into its grid slot while the other tiles fly in around it. The checkboxes tick, and the navy tile grows into the end card.
+- **Motion blur:** the master averages 4 sub-frames per frame, and 12 on fast moves (`--sub` sets the base count). The browser preview plays without blur.
+- **Rendering:** WebGL runs through SwiftShader in headless Chromium. A full render takes about 7 minutes.
 
 ## Placeholders to replace
 - **Footage**: both shots are illustrated stand-ins. Put `footage/work.jpg` and `footage/portrait.jpg` (9:16) in place and they are used automatically. Moving footage needs a video hookup.

@@ -22,9 +22,10 @@ const has = f => args.includes(f);
 const arg = f => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
 
 // Style frames: one per scene, each on a held moment.
-const STILLS = { "1-person": 30, "2-offer": 125, "3-amount": 188, "4-grid": 234, "5-end-card": 296 };
+const STILLS = { "1-person": 30, "2-offer": 120, "3-amount": 186, "4-grid": 240, "5-end-card": 296 };
+const SUB = +(arg("--sub") || 4);   // sub-frames per frame for motion blur
 
-const MIME = { ".html": "text/html", ".woff2": "font/woff2", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png" };
+const MIME = { ".html": "text/html", ".woff2": "font/woff2", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".js": "text/javascript", ".woff": "font/woff" };
 const server = http.createServer((req, res) => {
   const p = path.join(DIR, decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (!p.startsWith(DIR) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
@@ -34,15 +35,17 @@ const server = http.createServer((req, res) => {
 await new Promise(r => server.listen(0, "127.0.0.1", r));
 const url = `http://127.0.0.1:${server.address().port}/film.html?render`;
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const page = await browser.newPage({ viewport: { width: 1080, height: 1920 }, deviceScaleFactor: 1 });
 page.on("pageerror", e => { console.error("page error:", e.message); process.exitCode = 1; });
 await page.goto(url);
+page.on("console", m => { if (m.type() === "error") console.error("console:", m.text()); });
+await page.waitForFunction(() => window.filmReady);
 await page.evaluate(() => window.filmReady);
 const { FRAMES, FPS } = await page.evaluate(() => ({ FRAMES: window.FILM.FRAMES, FPS: window.FILM.FPS }));
 
-async function grab(f, file) {
-  const b64 = await page.evaluate(f => { window.FILM.renderFrame(f); return document.getElementById("c").toDataURL("image/png").split(",")[1]; }, f);
+async function grab(f, file, sub = SUB) {
+  const b64 = await page.evaluate(([f, sub]) => { window.FILM.renderFrame(f, sub); return document.getElementById("c").toDataURL("image/png").split(",")[1]; }, [f, sub]);
   fs.writeFileSync(file, Buffer.from(b64, "base64"));
 }
 

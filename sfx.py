@@ -76,20 +76,21 @@ for b in range(20):
     put(kick(), b * 15, 0.22)
     put(hat(), b * 15 + 7.5, 0.05)
 
-put(whoosh(0.45), 43, 0.25)                    # f45 footage shrinks into its tile
-for f in range(74, 97, 2):                     # f74–96 odometer ticks
+put(whoosh(0.45), 38, 0.25)                    # f45 footage shrinks into its tile
+for f in range(66, 89, 2):                     # f66–88 odometer ticks
     put(tick(), f, 0.18)
-put(whoosh(0.5, up=False), 133, 0.3)           # f135 pan
-for i in range(6):                             # digits land (145 + 3i + 5)
-    put(tap(760 + 40 * i), 150 + 3 * i, 0.35)
-for f in range(160, 172):                      # coin roll
+put(whoosh(0.6, up=False), 128, 0.3)           # f135 pan
+for i in range(6):                             # digits land (140 + 3i + ~6)
+    put(tap(760 + 40 * i), 146 + 3 * i, 0.35)
+for f in range(156, 168):                      # coin roll
     put(tick(1400 + 60 * (f % 3)), f, 0.08)
-put(chime(), 172, 0.16)                        # gleam
-for f in (212, 216, 220, 224):                 # checkbox ticks
+put(chime(), 168, 0.16)                        # gleam
+put(whoosh(0.5), 190, 0.22)                    # pull-back
+for f in (214, 218, 222, 226, 230, 234):       # checkbox ticks
     put(click(), f, 0.25)
 n = int(SR * 0.4); t = np.linspace(0, 1, n)    # f240 rising swell into the logo
 swell = (lowpass(rng.standard_normal(n), 0.03 + 0.2 * t) * 2 + 0.3 * np.sin(2 * np.pi * np.cumsum(200 + 600 * t) / SR)) * t ** 2
-put(swell, 240, 0.3)
+put(swell, 242, 0.3)
 
 fade = int(SR * 0.25); mix[-fade:] *= np.linspace(1, 0, fade)
 mix *= 0.8 / max(1e-9, np.abs(mix).max())
