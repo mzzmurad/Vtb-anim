@@ -448,7 +448,7 @@ function drawDigits(g, t, D, cap) {
   g.translate(cx, cy + (1 - sp) * -D.h * 0.9 + id.bob * 0.6 * (h / 200)); g.rotate(id.ry * 0.04 - (1 - sp) * 0.12);
   g.scale(1 + land, 1 - land); g.drawImage(img, -w / 2, -h / 2, w, h); g.restore();
   if (t >= 156 && coin) {   // coin rolls in from the right, leans on the last zero
-    const cs = h * 0.78, sc = spring(t - 156, 0.2, 0.82), xf = cx + w * 0.5 + cs * 0.22, x = lerp(xf + D.w * 0.7, xf, sc);
+    const cs = h * 0.78, sc = spring(t - 156, 0.2, 0.82), xf = cx + w * 0.5 + cs * 0.36, x = lerp(xf + D.w * 0.7, xf, sc);
     const roll = (xf - x) / (cs / 2) + lerp(0, -0.22, smooth(prog(t, 164, 14)));
     g.save(); g.filter = `blur(${cs * 0.06}px)`; g.fillStyle = "rgba(1,30,95,0.16)"; g.beginPath(); g.ellipse(x, cy + cs * 0.48, cs * 0.34, cs * 0.05, 0, 0, 7); g.fill(); g.restore();
     g.save(); g.translate(x, cy + h * 0.04); g.rotate(roll); g.drawImage(coin, -cs / 2, -cs / 2, cs, cs * coin.height / coin.width); g.restore();
