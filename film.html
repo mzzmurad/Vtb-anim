@@ -323,18 +323,23 @@ function checkbox(g, x, y, s, t, at, mode) {
 }
 
 /* ============================================================
-   LAYOUT (64 px margins; text inside y 250–1520)
+   LAYOUT — every tile/board sits inside the content box: 90 px left/right, 200 px top, 150 px bottom
+   (x 90–990, y 200–1770). Only the opening full-bleed footage goes edge to edge.
    ============================================================ */
-const CARD = { x: 64, y: 96, w: 952, h: 680 };
-const PILL = { x: 64, y: 808, h: 76 };
-const T_RATE = { x: 64, y: 916, w: 952, h: 300 };
-const T_LOCK = { x: 64, y: 1240, w: 952, h: 270 };
-const BIG = { x: 64, y: 470, w: 952, h: 860 };
-const GW = 464, GH = 324;
+const M_L = 90, M_R = 90, M_T = 200, M_B = 150;
+const BOX = { x: M_L, y: M_T, w: W - M_L - M_R, h: H - M_T - M_B };          // 900 × 1570
+const CARD = { x: BOX.x, y: BOX.y, w: BOX.w, h: 836 };                         // 200–1036
+const PILL = { x: BOX.x, y: 1068, h: 76 };                                     // 1068–1144
+const T_RATE = { x: BOX.x, y: 1176, w: BOX.w, h: 300 };                        // 1176–1476
+const T_LOCK = { x: BOX.x, y: 1500, w: BOX.w, h: 270 };                        // 1500–1770
+const BIG = { x: BOX.x, y: BOX.y + (BOX.h - 860) / 2, w: BOX.w, h: 860 };      // centred in the box
+const HEAD_Y = [BOX.y + 78, BOX.y + 172];                                       // headline baselines
+const GRID_TOP = 412, GAP = 24;
+const GW = (BOX.w - GAP) / 2, GH = (BOX.y + BOX.h - GRID_TOP - 2 * GAP) / 3;   // 438 × 437; grid ends at 1770
 const SLOT = {
-  portrait: { x: 64, y: 490, w: GW, h: GH }, rate:   { x: 552, y: 490, w: GW, h: GH },
-  amount:   { x: 64, y: 838, w: GW, h: GH }, online: { x: 552, y: 838, w: GW, h: GH },
-  branch:   { x: 64, y: 1186, w: GW, h: GH }, fast:  { x: 552, y: 1186, w: GW, h: GH },
+  portrait: { x: BOX.x, y: GRID_TOP, w: GW, h: GH },                    rate:   { x: BOX.x + GW + GAP, y: GRID_TOP, w: GW, h: GH },
+  amount:   { x: BOX.x, y: GRID_TOP + GH + GAP, w: GW, h: GH },          online: { x: BOX.x + GW + GAP, y: GRID_TOP + GH + GAP, w: GW, h: GH },
+  branch:   { x: BOX.x, y: GRID_TOP + 2 * (GH + GAP), w: GW, h: GH },    fast:   { x: BOX.x + GW + GAP, y: GRID_TOP + 2 * (GH + GAP), w: GW, h: GH },
 };
 // checkbox ticks: the last three land on "onlayn" (7.40 s), "filialda" (8.74 s), "sürətli" (9.12 s)
 const TICKS = { portrait: 198, rate: 204, amount: 210, online: 222, branch: 262, fast: 274 };
@@ -374,14 +379,14 @@ function drawScene12(g, t) {
     tileBase(g, Rr, C.tRate, 1, a.a);
     tileHeader(g, Rr, 1, COPY.rateTitle, prog(t, 44, 10), { glyph: "%" });
     const id = idle(t, 0.3), ps = spring(t - 48, 0.3, 0.55);
-    obj3D(g, O.pct, Rr.x + 800, Rr.y + 175 + id.bob, 340 * ps, [id.rx + 0.25 + v * 0.004, -0.5 + id.ry - (1 - ps) * 1.4, 0.18], { clipR: Rr, alpha: a.a });
+    obj3D(g, O.pct, Rr.x + Rr.w - 150, Rr.y + 175 + id.bob, 340 * ps, [id.rx + 0.25 + v * 0.004, -0.5 + id.ry - (1 - ps) * 1.4, 0.18], { clipR: Rr, alpha: a.a });
     drawOdometer(g, t, Rr.x + 40, Rr.y + 246, 168, a.a);
   }
   { // "Zaminsiz kredit" tile on 3.5–4.3 s — both lines finish before the reading hold at story 130
     const a = tileIn(t, 102), v = scrollV(t, 4), Rl = { ...T_LOCK, y: T_LOCK.y + a.dy + scrollY(t, 4) };
     tileBase(g, Rl, "#FFFFFF", 1, a.a);
     const id = idle(t, 1.7), ps = spring(t - 108, 0.3, 0.55);
-    obj3D(g, O.shield, Rl.x + 805, Rl.y + 150 + id.bob, 300 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12], { clipR: Rl, alpha: a.a });
+    obj3D(g, O.shield, Rl.x + Rl.w - 145, Rl.y + 150 + id.bob, 300 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12], { clipR: Rl, alpha: a.a });
     rise(g, COPY.lockup[0], Rl.x + 40, Rl.y + 122, 104, C.ink, smooth(prog(t, 106, 12)), { weight: 800, track: -0.03, alpha: a.a });
     rise(g, COPY.lockup[1], Rl.x + 40, Rl.y + 224, 104, C.ink, smooth(prog(t, 112, 12)), { weight: 800, track: -0.03, alpha: a.a });
   }
@@ -414,7 +419,7 @@ function drawAmount(g, t, Rbig, Rsmall, e) {
   g.save(); rr(g, tile.x, tile.y, tile.w, tile.h, 44 * k); g.clip();
   tileHeader(g, tile, k, COPY.amountTitle, prog(t, 150, 10), { glyph: "₼", icon: "#F2A93B" });
   const sk = Rsmall.w / GW;
-  const D = lerpR({ x: Rbig.x, y: Rbig.y + 110, w: Rbig.w, h: 470 }, { x: Rsmall.x, y: Rsmall.y + 76 * sk, w: Rsmall.w, h: 190 * sk }, e);
+  const D = lerpR({ x: Rbig.x, y: Rbig.y + 110, w: Rbig.w, h: 470 }, { x: Rsmall.x, y: Rsmall.y + Rsmall.h * 0.24, w: Rsmall.w, h: Rsmall.h * 0.5 }, e);
   const cap = lerp(230, 70 * sk, e);
   drawDigits(g, t, D, cap);
   // label: two centred lines (big) → one grey line (tile)
@@ -425,7 +430,7 @@ function drawAmount(g, t, Rbig, Rsmall, e) {
     rise(g, COPY.amountLabel[1], tile.x + tile.w / 2, cy + 200 * k, 92 * k, C.ink, smooth(prog(t, 170, 14)), { weight: 800, align: "center" });
     g.restore();
   }
-  if (e > 0.5) rise(g, COPY.amountLabel.join(" "), tile.x + 36 * k, tile.y + 290 * k, 28 * k, C.inkSoft, smooth(prog(e, 0.5, 0.5)), { weight: 600, track: 0 });
+  if (e > 0.5) rise(g, COPY.amountLabel.join(" "), tile.x + 36 * k, tile.y + tile.h - 44 * k, 28 * k, C.inkSoft, smooth(prog(e, 0.5, 0.5)), { weight: 600, track: 0 });
   g.restore();
 }
 function drawDigits(g, t, D, cap) {
@@ -465,23 +470,23 @@ function pushOut(R, t, center) {
   return { ...R, x: R.x + dx / d * 1700 * p, y: R.y + dy / d * 1700 * p };
 }
 const GRID_OBJ = {
-  rate:   { o: () => O.pct,   size: 230, pos: [372, 248], rot: [0.25, -0.5, 0.18], color: () => C.tRate },
-  online: { o: () => O.phone, size: 260, pos: [384, 244], rot: [0.2, -0.55, 0.22], color: () => C.tTerm },
-  branch: { o: () => O.pin,   size: 210, pos: [374, 250], rot: [0.1, -0.4, 0],     color: () => C.tCom },
-  fast:   { o: () => O.bolt,  size: 230, pos: [380, 250], rot: [0.15, -0.5, -0.2], color: () => "GRAD" },
+  rate:   { o: () => O.pct,   size: 270, pos: [96, 92], rot: [0.25, -0.5, 0.18], color: () => C.tRate },
+  online: { o: () => O.phone, size: 310, pos: [84, 110], rot: [0.2, -0.55, 0.22], color: () => C.tTerm },
+  branch: { o: () => O.pin,   size: 250, pos: [94, 100], rot: [0.1, -0.4, 0],     color: () => C.tCom },
+  fast:   { o: () => O.bolt,  size: 270, pos: [90, 104], rot: [0.15, -0.5, -0.2], color: () => "GRAD" },
 };
 function drawGridTile(g, t, id, R, ph) {
   const k = R.w / GW, idl = idle(t, ph, 0.8), dark = id === "fast";
   if (id === "portrait") {
     g.save(); softShadow(g, k); g.fillStyle = "#fff"; rr(g, R.x, R.y, R.w, R.h, 44 * k); g.fill(); g.restore();
-    drawFootage(g, "portrait", R, 44 * k, 1.45, [0.6, 0.4]);
+    drawFootage(g, "portrait", R, 44 * k, 1.12, [0.6, 0.42]);
   } else {
     const spec = GRID_OBJ[id], L = COPY.grid[id];
     tileBase(g, R, spec.color(), k);
     g.save(); rr(g, R.x, R.y, R.w, R.h, 44 * k); g.clip();
     // object pops when its line is spoken (tick time), then floats
     const ps = id === "rate" ? 1 : lerp(0.55, 1, spring(t - TICKS[id] + 4, 0.3, 0.5));
-    obj3D(g, spec.o(), R.x + spec.pos[0] * k, R.y + spec.pos[1] * k + idl.bob * k, spec.size * k * ps, [spec.rot[0] + idl.rx, spec.rot[1] + idl.ry - (1 - ps) * 2, spec.rot[2]], { clipR: R, radius: 44 * k });
+    obj3D(g, spec.o(), R.x + R.w - spec.pos[0] * k, R.y + R.h - spec.pos[1] * k + idl.bob * k, spec.size * k * ps, [spec.rot[0] + idl.rx, spec.rot[1] + idl.ry - (1 - ps) * 2, spec.rot[2]], { clipR: R, radius: 44 * k });
     font(g, 34 * k, 800, -0.02); g.fillStyle = dark ? "#fff" : C.ink; g.textAlign = "left"; g.fillText(L[0], R.x + 36 * k, R.y + 76 * k);
     font(g, 28 * k, 600, 0); g.fillStyle = dark ? "rgba(255,255,255,0.75)" : C.inkSoft; g.fillText(L[1], R.x + 36 * k, R.y + 116 * k);
     g.restore();
@@ -505,9 +510,9 @@ function drawScene4(g, t) {
   }
   // headline: line 1 on "onlayn və ya … filialda" (7.4 s), line 2 on "sürətli rəsmiləşdir" (9.1 s)
   const hp = accel(prog(t, EXP, 12)) * 800;
-  let hs = 86; font(g, hs, 800, -0.03); while (Math.max(...COPY.headline.map(l => g.measureText(l).width)) > 952) { hs -= 2; font(g, hs, 800, -0.03); }
-  rise(g, COPY.headline[0], 64, 362 - hp, hs, "#fff", smooth(prog(t, 220, 14)), { weight: 800, track: -0.03 });
-  rise(g, COPY.headline[1], 64, 456 - hp, hs, "#fff", smooth(prog(t, 272, 14)), { weight: 800, track: -0.03 });
+  let hs = 86; font(g, hs, 800, -0.03); while (Math.max(...COPY.headline.map(l => g.measureText(l).width)) > BOX.w) { hs -= 2; font(g, hs, 800, -0.03); }
+  rise(g, COPY.headline[0], BOX.x, HEAD_Y[0] - hp, hs, "#fff", smooth(prog(t, 220, 14)), { weight: 800, track: -0.03 });
+  rise(g, COPY.headline[1], BOX.x, HEAD_Y[1] - hp, hs, "#fff", smooth(prog(t, 272, 14)), { weight: 800, track: -0.03 });
 }
 
 /* ---------------- one instant ---------------- */
@@ -538,7 +543,7 @@ function renderFrame(f, sub = 1) {
     }
     actx.globalAlpha = 1; out.drawImage(acc, 0, 0);
   }
-  if (showSafe) { out.save(); out.strokeStyle = "rgba(255,0,80,0.8)"; out.lineWidth = 3; out.setLineDash([16, 10]); out.strokeRect(64, 250, W - 128, H - 650); out.restore(); }
+  if (showSafe) { out.save(); out.strokeStyle = "rgba(255,0,80,0.8)"; out.lineWidth = 3; out.setLineDash([16, 10]); out.strokeRect(BOX.x, BOX.y, BOX.w, BOX.h); out.restore(); }
 }
 
 /* ---------------- boot ---------------- */

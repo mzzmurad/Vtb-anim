@@ -21,6 +21,7 @@ Preview: `npx serve films/vtb-cash-loan` (or any static server), then open `/fil
 - **Type:** VTB Group (Book, Demi Bold, Bold, Extra Bold) for all text and the 3D numerals, set about 1.5% tighter.
 - **3D objects:** glossy renders generated with Higgsfield (GPT Image 2.6, high 2K, transparent background), stored in `assets/objects/` as `pct`, `shield`, `coin`, `amount`, `phone`, `pin` and `bolt`. The phone screen shows an application form, not a card, because VTB has no card product here. They animate in 2D with springs, float, tilt and breathe; the "100 000" drops in and the coin rolls in. They replace the hand-built three.js models, which are still in the code but no longer used.
 - **"Zaminsiz kredit"** sits on its own white tile like the other conditions.
+- **Margins:** every tile sits inside 90 px left/right, 200 px top and 150 px bottom (x 90–990, y 200–1770); only the opening full-bleed shot goes edge to edge. The values are `M_L`, `M_R`, `M_T` and `M_B` in `film.html`, and the safe-area toggle in the preview draws this box.
 - **986 card removed:** its voiceover line ("Daha ətraflı məlumat üçün 986…") is dropped too. There is no legal line on screen; add one when VTB legal supplies the text.
 
 | Film time | Voiceover phrase | On screen |
