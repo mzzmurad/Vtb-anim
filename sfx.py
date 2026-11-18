@@ -6,7 +6,7 @@ Temp sounds for review; swap for the licensed track + SFX in the final mix.
 import sys, wave
 import numpy as np
 
-SR, FPS, DUR = 48000, 30, 19.2
+SR, FPS, DUR = 48000, 30, 15.0
 HOLDS = [(130, 50), (184, 41), (288, 44)]   # same as film.html: cues are in story frames
 N = int(SR * DUR)
 mix = np.zeros(N)
@@ -74,9 +74,6 @@ for f in (198, 204, 210, 222, 262, 274):       # checkbox ticks
     put(click(), f, 0.25)
 n = int(SR * 0.4); t = np.linspace(0, 1, n)    # rising swell into the end card
 put((lowpass(rng.standard_normal(n), 0.03 + 0.2 * t) * 2 + 0.3 * np.sin(2 * np.pi * np.cumsum(200 + 600 * t) / SR)) * t ** 2, 290, 0.3)
-put(tap(520), 348, 0.35)                       # "986" lands
-put(chime(), 350, 0.1)
-put(whoosh(0.4), 425, 0.2)                     # info card clears for the logo sting
 
 fade = int(SR * 0.25); mix[-fade:] *= np.linspace(1, 0, fade)
 mix *= 0.8 / max(1e-9, np.abs(mix).max())

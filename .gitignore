@@ -1,3 +1,7 @@
 node_modules
 *.mov
 out/check/
+# licensed VTB brand fonts — keep out of the public repo
+fonts/vtb/
+# extracted from footage/worker.mp4 by render.mjs
+footage/frames/

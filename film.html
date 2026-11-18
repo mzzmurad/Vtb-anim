@@ -13,6 +13,11 @@
     unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
   @font-face { font-family: "Inter Tight"; font-weight: 800; src: url(fonts/inter-tight-latin-ext-800-normal.woff2) format("woff2");
     unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  /* VTB Group — official brand typeface (licensed; files live in fonts/vtb/, not committed) */
+  @font-face { font-family: "VTB Group"; font-weight: 400; src: url(fonts/vtb/VTB55.OTF) format("opentype"); }
+  @font-face { font-family: "VTB Group"; font-weight: 600; src: url(fonts/vtb/VTB65.OTF) format("opentype"); }
+  @font-face { font-family: "VTB Group"; font-weight: 700; src: url(fonts/vtb/VTB75.OTF) format("opentype"); }
+  @font-face { font-family: "VTB Group"; font-weight: 800; src: url(fonts/vtb/VTB95.OTF) format("opentype"); }
   html, body { margin: 0; height: 100%; background: #0d1117; color: #e6edf3; font: 14px/1.4 "Inter Tight", system-ui, sans-serif; }
   .wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px; box-sizing: border-box; }
   #c { height: min(80vh, 1920px); max-width: calc(100vw - 32px); aspect-ratio: 9 / 16; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,.4); }
@@ -33,14 +38,14 @@
   <canvas id="gl" width="1080" height="1920"></canvas>
   <div class="ui">
     <button id="play">Pause</button>
-    <input id="scrub" type="range" min="0" max="575" value="0">
+    <input id="scrub" type="range" min="0" max="449" value="0">
     <span id="tc">f000 · 0.00s</span>
     <label><input id="safe" type="checkbox"> safe area</label>
   </div>
 </div>
 <script type="module">
 /* ============================================================
-   VTB Bank — Cash loan · 21.3 s vertical (1080×1920, 30 fps): 19.2 s film + 2.1 s VTB logo sting, timed to the voiceover
+   VTB Bank — Cash loan · 17.1 s vertical (1080×1920, 30 fps): 15.0 s film + 2.1 s VTB logo sting, timed to the voiceover
    Style: soft app tiles (Yandex / WB-bank screens) with glossy 3D objects
    cropped at the tile corner. Motion: springs + continuous idle float,
    real motion blur (sub-frame accumulation) in the master render.
@@ -53,7 +58,7 @@ import { TTFLoader } from "three/addons/loaders/TTFLoader.js";
 import { Font } from "three/addons/loaders/FontLoader.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
-const W = 1080, H = 1920, FPS = 30, FRAMES = 576;   // 19.2 s of film; render.mjs appends the VTB logo sting (2.1 s)
+const W = 1080, H = 1920, FPS = 30, FRAMES = 450;   // 15.0 s of film; render.mjs appends the VTB logo sting (2.1 s)
 
 /* Story time vs real time: the animation is written in "story" frames; HOLDS insert still moments
    (objects keep floating) after each condition so it can be read. [story frame, extra real frames] */
@@ -61,13 +66,14 @@ const HOLDS = [[130, 50], [184, 41], [288, 44]];
 function toStory(t) { let s = t; for (const [hs, ex] of HOLDS) { if (s <= hs) break; if (s <= hs + ex) return hs; s -= ex; } return s; }
 let RT = 0;   // real time (frames) — drives the idle float so held moments stay alive
 
-// ---- Palette: VTB blues (approximate — swap for brandbook values) + soft tile tints ----
+// ---- Palette: client gradient #0250BF → #67C6FF; sting navy #04378F (from the VTB logo animation)
 const C = {
-  navy: "#04378F", azure: "#009FDF", gold: "#F2B544",
-  ink: "#14213D", inkSoft: "#5B6B85",
-  canvas: "#F1F4F8", white: "#FFFFFF",
-  tRate: "#E2F0FB", tCom: "#E9E8FC", tTerm: "#E3ECFA", tAmount: "#E6F3FC",
+  navy: "#0250BF", azure: "#2E8EEA", sky: "#67C6FF", sting: "#04378F", gold: "#F2B544",
+  ink: "#0B1F4D", inkSoft: "#5A6E92",
+  gradTop: "#0250BF", gradBottom: "#67C6FF", white: "#FFFFFF",
+  tRate: "#FFFFFF", tCom: "#F1F5FF", tTerm: "#EEF7FF", tAmount: "#FFFFFF",
 };
+function bgGradient(g) { const gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, C.gradTop); gr.addColorStop(1, C.gradBottom); return gr; }
 
 // ---- Copy — follows the voiceover (audio/voiceover.wav). Only 9,9% and 100 000 are shown as conditions.
 // VO: "Bank VTB-dən səhiyyə işçiləri üçün 9,9%-dən başlayan zaminsiz kredit. / 100 min manata dək məbləği
@@ -85,12 +91,9 @@ const COPY = {
     branch: ["Filialda", "ən yaxın ünvanda"],
     fast:   ["Sürətli", "rəsmiləşdirmə"],
   },
-  logo: "VTB",
-  info: "Daha ətraflı məlumat üçün",
-  shortNum: "qısa nömrə",
   legal: "Kredit illik 9,9%-dən, 100 000 AZN-dək, zaminsiz verilir. Ətraflı şərtlər vtb.az saytında və 986 məlumat mərkəzində. [Yekun hüquqi mətn VTB tərəfindən təqdim olunacaq]",
 };
-const FOOTAGE_SRC = { work: "footage/work.jpg", portrait: "footage/portrait.jpg" };
+const FOOTAGE_FRAMES = 150;   // footage/worker.mp4 → footage/frames/0001.jpg… (render.mjs extracts them)
 
 /* ---------------- timing helpers ---------------- */
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
@@ -115,9 +118,11 @@ const ctx = buf.getContext("2d");
 const acc = document.createElement("canvas"); acc.width = W; acc.height = H;
 const actx = acc.getContext("2d");
 const mk = (w, h) => { const c = document.createElement("canvas"); c.width = Math.ceil(w); c.height = Math.ceil(h); return c; };
-function font(g, size, weight = 700, track = 0) { g.font = `${weight} ${size}px "Inter Tight"`; g.letterSpacing = `${(size * track).toFixed(2)}px`; }
+// VTB Group everywhere; letters set a touch tighter than default (−1.5% on top of each style's tracking)
+const TIGHT = -0.015;
+function font(g, size, weight = 700, track = 0) { g.font = `${weight} ${size}px "VTB Group", "Inter Tight"`; g.letterSpacing = `${(size * (track + TIGHT)).toFixed(2)}px`; }
 function rr(g, x, y, w, h, r) { r = Math.max(0, Math.min(r, w / 2, h / 2)); g.beginPath(); g.roundRect(x, y, w, h, r); }
-function softShadow(g, s = 1, a = 0.07) { g.shadowColor = `rgba(10,41,115,${a})`; g.shadowBlur = 48 * s; g.shadowOffsetY = 18 * s; g.shadowOffsetX = 0; }
+function softShadow(g, s = 1, a = 0.16) { g.shadowColor = `rgba(1,30,95,${a})`; g.shadowBlur = 48 * s; g.shadowOffsetY = 18 * s; g.shadowOffsetX = 0; }
 // text that rises + fades in (p 0→1)
 function rise(g, text, x, y, size, color, p, { weight = 700, track = -0.02, align = "left", alpha = 1 } = {}) {
   if (p <= 0) return;
@@ -127,49 +132,12 @@ function rise(g, text, x, y, size, color, p, { weight = 700, track = -0.02, alig
   g.restore();
 }
 
-/* ---------------- footage (placeholder or supplied stills) ---------------- */
-function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-function paintPlaceholder(kind) {
-  const c = mk(W, H), g = c.getContext("2d");
-  let gr = g.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, "#C9D9E6"); gr.addColorStop(0.55, "#E4ECF2"); gr.addColorStop(1, "#D5DDE4");
-  g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  g.save(); g.filter = "blur(36px)";
-  g.fillStyle = "rgba(255,255,255,0.85)"; g.fillRect(-60, 180, 520, 900); g.fillStyle = "rgba(255,255,255,0.55)"; g.fillRect(560, 120, 300, 520);
-  g.fillStyle = "rgba(110,150,120,0.55)"; g.beginPath(); g.arc(930, 820, 170, 0, 7); g.fill(); g.restore();
-  const skin = (cx, cy, r) => { const s = g.createRadialGradient(cx - r * .35, cy - r * .4, r * .1, cx, cy, r * 1.05); s.addColorStop(0, "#EDC3A4"); s.addColorStop(1, "#C68C6B"); return s; };
-  const shirt = (y0, y1) => { const s = g.createLinearGradient(0, y0, 0, y1); s.addColorStop(0, "#4A6A8F"); s.addColorStop(1, "#2E4A6B"); return s; };
-  if (kind === "work") {
-    const cx = 610, hy = 820;
-    g.fillStyle = "#C79B80"; g.fillRect(cx - 55, hy + 110, 110, 120);
-    g.fillStyle = shirt(1000, 1700); g.beginPath(); g.moveTo(cx - 330, 1700); g.bezierCurveTo(cx - 330, 1180, cx - 260, 1030, cx - 90, 1000);
-    g.lineTo(cx + 90, 1000); g.bezierCurveTo(cx + 260, 1030, cx + 330, 1180, cx + 330, 1700); g.fill();
-    g.strokeStyle = "#3C5A7E"; g.lineWidth = 120; g.lineCap = "round"; g.beginPath(); g.moveTo(cx - 250, 1150); g.quadraticCurveTo(cx - 330, 1420, cx - 170, 1500); g.stroke();
-    g.fillStyle = skin(cx, hy, 150); g.beginPath(); g.ellipse(cx, hy, 135, 160, 0, 0, 7); g.fill();
-    g.fillStyle = "#3A2B24"; g.beginPath(); g.ellipse(cx, hy - 70, 145, 105, 0, Math.PI, 0); g.fill();
-    let d = g.createLinearGradient(0, 1480, 0, H); d.addColorStop(0, "#E2D6C8"); d.addColorStop(1, "#C9B9A6"); g.fillStyle = d; g.fillRect(0, 1480, W, H - 1480);
-    g.fillStyle = "#A9B4BF"; rr(g, 150, 1180, 430, 320, 22); g.fill(); g.fillStyle = "#8D99A5"; g.fillRect(120, 1490, 490, 26);
-    g.fillStyle = "#F4F1EC"; rr(g, 700, 1530, 180, 120, 18); g.fill();
-  } else {
-    const cx = 540, hy = 760;
-    g.fillStyle = "#C79B80"; g.fillRect(cx - 58, hy + 110, 116, 130);
-    g.fillStyle = shirt(950, H); g.beginPath(); g.moveTo(cx - 400, H); g.bezierCurveTo(cx - 400, 1160, cx - 300, 980, cx - 100, 950);
-    g.lineTo(cx + 100, 950); g.bezierCurveTo(cx + 300, 980, cx + 400, 1160, cx + 400, H); g.fill();
-    g.fillStyle = "#2C4666"; rr(g, cx - 360, 1260, 720, 190, 95); g.fill(); g.fillStyle = "#3D5D82"; rr(g, cx - 330, 1300, 500, 150, 75); g.fill();
-    g.fillStyle = "#D7A584"; g.beginPath(); g.arc(cx + 250, 1330, 52, 0, 7); g.fill(); g.beginPath(); g.arc(cx - 230, 1395, 50, 0, 7); g.fill();
-    g.fillStyle = skin(cx, hy, 150); g.beginPath(); g.ellipse(cx, hy, 140, 165, 0, 0, 7); g.fill();
-    g.fillStyle = "#3A2B24"; g.beginPath(); g.ellipse(cx, hy - 72, 150, 108, 0, Math.PI, 0); g.fill();
-  }
-  const r = rng(kind === "work" ? 7 : 11), img = g.getImageData(0, 0, W, H), px = img.data;
-  for (let i = 0; i < px.length; i += 4) { const n = (r() - 0.5) * 12; px[i] += n; px[i + 1] += n; px[i + 2] += n; }
-  g.putImageData(img, 0, 0);
-  font(g, 26, 600, 0.02); g.fillStyle = "rgba(10,41,115,0.5)"; g.textAlign = "center";
-  g.fillText(kind === "work" ? "PLACEHOLDER · working shot" : "PLACEHOLDER · portrait", W / 2, kind === "work" ? 1140 : 1720);
-  return c;
-}
-const FOOTAGE = {};
+/* ---------------- footage: worker clip (1280×720), ping-pong looped on real time ---------------- */
+const FOOT = [];
 const loadImg = src => new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
-function drawFootage(g, kind, R, r, zoom = 1, focal = [0.5, 0.45]) {
-  const img = FOOTAGE[kind], s = Math.max(R.w / img.width, R.h / img.height) * zoom, dw = img.width * s, dh = img.height * s;
+function footFrame() { const n = FOOT.length, k = Math.floor(RT) % (2 * n - 2); return FOOT[k < n ? k : 2 * n - 2 - k]; }
+function drawFootage(g, _kind, R, r, zoom = 1, focal = [0.6, 0.45]) {
+  const img = footFrame(), s = Math.max(R.w / img.width, R.h / img.height) * zoom, dw = img.width * s, dh = img.height * s;
   let ox = R.x + R.w / 2 - dw * focal[0], oy = R.y + R.h / 2 - dh * focal[1];
   ox = Math.min(R.x, Math.max(R.x + R.w - dw, ox)); oy = Math.min(R.y, Math.max(R.y + R.h - dh, oy));
   g.save(); rr(g, R.x, R.y, R.w, R.h, r); g.clip(); g.drawImage(img, ox, oy, dw, dh); g.restore();
@@ -196,7 +164,7 @@ const VH = 2 * 10 * Math.tan(THREE.MathUtils.degToRad(12));  // world units visi
 
 const plastic = (color, o = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.3, metalness: 0, clearcoat: 0.9, clearcoatRoughness: 0.18, ...o });
 const M = {
-  azure: plastic(C.azure), azureLight: plastic("#4CC0EE"), navy: plastic(C.navy, { roughness: 0.35 }),
+  azure: plastic(C.azure), azureLight: plastic(C.sky), navy: plastic(C.navy, { roughness: 0.35 }),
   white: plastic("#FFFFFF", { roughness: 0.22 }), pearl: plastic("#F4FAFF", { roughness: 0.2 }),
   gold: plastic(C.gold, { metalness: 0.35, roughness: 0.28 }), goldDeep: plastic("#D99A2B", { metalness: 0.4, roughness: 0.3 }),
 };
@@ -258,7 +226,7 @@ function makePhone() {
   const g = new THREE.Group();
   g.add(new THREE.Mesh(new RoundedBoxGeometry(1.05, 2.05, 0.14, 6, 0.12), M.navy));
   const sc = mk(512, 1000), s = sc.getContext("2d");
-  let gr = s.createLinearGradient(0, 0, 0, 1000); gr.addColorStop(0, "#1BB3EE"); gr.addColorStop(1, "#0A3A92"); s.fillStyle = gr; s.fillRect(0, 0, 512, 1000);
+  let gr = s.createLinearGradient(0, 0, 0, 1000); gr.addColorStop(0, C.sky); gr.addColorStop(1, C.navy); s.fillStyle = gr; s.fillRect(0, 0, 512, 1000);
   font(s, 120, 800, -0.03); s.fillStyle = "#fff"; s.textAlign = "center"; s.fillText("VTB", 256, 250);
   s.fillStyle = "rgba(255,255,255,0.95)"; rr(s, 50, 330, 412, 250, 40); s.fill();
   font(s, 40, 600); s.fillStyle = "#5B6B85"; s.fillText("Nağd kredit", 256, 410);
@@ -292,9 +260,9 @@ function build3D() {
   for (const ch of COPY.amount) {
     if (ch === " ") { x += 0.24; continue; }
     const m = text3D(ch, { size: 1, depth: 0.36, bevel: 0.05 }), holder = new THREE.Group(); holder.add(m);
-    holder.userData.x = x + m.userData.adv / 2; x += m.userData.adv + 0.02; grp.add(holder); items.push(holder);
+    holder.userData.x = x + m.userData.adv / 2; x += m.userData.adv - 0.03; grp.add(holder); items.push(holder);
   }
-  const width = x - 0.02; items.forEach(h => { h.userData.x -= width / 2; });
+  const width = x + 0.03; items.forEach(h => { h.userData.x -= width / 2; });
   grp.visible = false; scene.add(grp); OBJ.push(grp);
   DIGITS = { grp, items, width };
 }
@@ -327,7 +295,9 @@ function obj3D(g, o, cx, cy, size, rot = [0, 0, 0], { clipR = null, radius = 44,
 const idle = (_t, ph, amp = 1) => ({ rx: 0.1 * amp * wave(RT, 140, ph), ry: 0.22 * amp * wave(RT, 110, ph + 1), bob: 7 * amp * wave(RT, 84, ph + 2) });
 
 /* ---------------- tile chrome ---------------- */
-function tileBase(g, R, color, s = 1, a = 1) { g.save(); g.globalAlpha *= a; softShadow(g, s); g.fillStyle = color; rr(g, R.x, R.y, R.w, R.h, 44 * s); g.fill(); g.restore(); }
+function tileBase(g, R, color, s = 1, a = 1) {
+  if (color === "GRAD") { const gr = g.createLinearGradient(0, R.y, 0, R.y + R.h); gr.addColorStop(0, C.navy); gr.addColorStop(1, "#3C9BF0"); color = gr; }
+  g.save(); g.globalAlpha *= a; softShadow(g, s); g.fillStyle = color; rr(g, R.x, R.y, R.w, R.h, 44 * s); g.fill(); g.restore(); }
 function tileHeader(g, R, s, title, p, { dark = false, icon = C.azure, glyph = "" } = {}) {
   if (p <= 0) return;
   g.save(); g.globalAlpha *= clamp(p * 1.5);
@@ -384,7 +354,7 @@ function drawScene12(g, t) {
   const fr = footageRect(t);
   const R = { x: fr.x, y: fr.y + scrollY(t, 0), w: fr.w, h: fr.h };
   if (t >= 20) { g.save(); softShadow(g); g.fillStyle = "#fff"; rr(g, R.x, R.y, R.w, R.h, fr.r); g.fill(); g.restore(); }
-  drawFootage(g, "work", R, fr.r, zoom, [0.5, 0.5]);
+  drawFootage(g, "work", R, fr.r, zoom, [0.6, 0.45]);
   if (t < 24) return;
 
   { // audience pill — on "işçiləri üçün" (0.9–1.6 s)
@@ -392,9 +362,9 @@ function drawScene12(g, t) {
     if (ps > 0) {
       font(g, 36, 600, 0); const pw = g.measureText(COPY.audience).width + 76;
       g.save(); g.translate(PILL.x + pw / 2, PILL.y + PILL.h / 2 + scrollY(t, 1)); g.scale(lerp(0.85, 1, ps), lerp(0.85, 1, ps)); g.globalAlpha = clamp(ps * 2);
-      g.fillStyle = C.navy; rr(g, -pw / 2, -PILL.h / 2, pw, PILL.h, PILL.h / 2); g.fill();
-      g.fillStyle = C.azure; g.beginPath(); g.arc(-pw / 2 + 32, 0, 8, 0, 7); g.fill();
-      g.fillStyle = "#fff"; g.textAlign = "left"; g.fillText(COPY.audience, -pw / 2 + 52, 13); g.restore();
+      g.fillStyle = "#fff"; rr(g, -pw / 2, -PILL.h / 2, pw, PILL.h, PILL.h / 2); g.fill();
+      g.fillStyle = C.sky; g.beginPath(); g.arc(-pw / 2 + 32, 0, 8, 0, 7); g.fill();
+      g.fillStyle = C.navy; g.textAlign = "left"; g.fillText(COPY.audience, -pw / 2 + 52, 13); g.restore();
     }
   }
   { // rate tile — odometer lands on "9,9%-dən" (1.9–3.0 s); 3D % cropped at the edge
@@ -407,8 +377,8 @@ function drawScene12(g, t) {
   }
   { // "Zaminsiz kredit" on 3.7–4.5 s, with a floating 3D shield
     const dy = scrollY(t, 4), v = scrollV(t, 5);
-    rise(g, COPY.lockup[0], 64, LOCK[0] + dy, LOCK_SIZE, C.ink, smooth(prog(t, 108, 12)), { weight: 800, track: -0.03 });
-    rise(g, COPY.lockup[1], 64, LOCK[1] + dy, LOCK_SIZE, C.ink, smooth(prog(t, 124, 12)), { weight: 800, track: -0.03 });
+    rise(g, COPY.lockup[0], 64, LOCK[0] + dy, LOCK_SIZE, "#fff", smooth(prog(t, 108, 12)), { weight: 800, track: -0.03 });
+    rise(g, COPY.lockup[1], 64, LOCK[1] + dy, LOCK_SIZE, "#fff", smooth(prog(t, 124, 12)), { weight: 800, track: -0.03 });
     const id = idle(t, 1.7), ps = spring(t - 110, 0.3, 0.55);
     obj3D(g, O.shield, 850, 1420 + id.bob + scrollY(t, 5), 250 * ps, [id.rx + v * 0.004, -0.35 + id.ry - (1 - ps) * 1.6, -0.12]);
   }
@@ -500,13 +470,13 @@ const GRID_OBJ = {
   rate:   { o: () => O.pct,   size: 230, pos: [372, 248], rot: [0.25, -0.5, 0.18], color: () => C.tRate },
   online: { o: () => O.phone, size: 260, pos: [384, 244], rot: [0.2, -0.55, 0.22], color: () => C.tTerm },
   branch: { o: () => O.pin,   size: 210, pos: [374, 250], rot: [0.1, -0.4, 0],     color: () => C.tCom },
-  fast:   { o: () => O.bolt,  size: 230, pos: [380, 250], rot: [0.15, -0.5, -0.2], color: () => C.navy },
+  fast:   { o: () => O.bolt,  size: 230, pos: [380, 250], rot: [0.15, -0.5, -0.2], color: () => "GRAD" },
 };
 function drawGridTile(g, t, id, R, ph) {
   const k = R.w / GW, idl = idle(t, ph, 0.8), dark = id === "fast";
   if (id === "portrait") {
     g.save(); softShadow(g, k); g.fillStyle = "#fff"; rr(g, R.x, R.y, R.w, R.h, 44 * k); g.fill(); g.restore();
-    drawFootage(g, "portrait", R, 44 * k, 1.0, [0.5, 0.38]);
+    drawFootage(g, "portrait", R, 44 * k, 1.45, [0.6, 0.4]);
   } else {
     const spec = GRID_OBJ[id], L = COPY.grid[id];
     tileBase(g, R, spec.color(), k);
@@ -530,60 +500,34 @@ function drawScene4(g, t) {
     if (ex <= 0) drawGridTile(g, t, "fast", R0, ph.fast);
     else {
       const R = lerpR(R0, { x: 0, y: 0, w: W, h: H }, ex);
-      g.save(); g.fillStyle = C.navy; rr(g, R.x, R.y, R.w, R.h, lerp(44, 0, clamp(ex))); g.fill(); g.restore();
+      tileBase(g, R, "GRAD", 1);
+      g.save(); g.globalAlpha = smooth(clamp(ex)); g.fillStyle = C.sting; rr(g, R.x, R.y, R.w, R.h, lerp(44, 0, clamp(ex))); g.fill(); g.restore();
       g.save(); g.globalAlpha = 1 - smooth(prog(t, EXP, 6)); drawGridTile(g, t, "fast", R0, ph.fast); g.restore();
     }
   }
   // headline: line 1 on "onlayn və ya … filialda" (7.4 s), line 2 on "sürətli rəsmiləşdir" (9.1 s)
+  const lg = smooth(prog(t, 228, 14)) * (1 - accel(prog(t, EXP, 10)));
+  if (lg > 0) {
+    g.save(); g.globalAlpha = lg * 0.8; font(g, 24, 400, 0); g.fillStyle = "#fff"; g.textAlign = "center";
+    const lines = []; let line = "";
+    for (const w of COPY.legal.split(" ")) { const tt = line ? line + " " + w : w; if (g.measureText(tt).width > 940) { lines.push(line); line = w; } else line = tt; }
+    lines.push(line); lines.forEach((l, k) => g.fillText(l, 540, 1566 + k * 32)); g.restore();
+  }
   const hp = accel(prog(t, EXP, 12)) * 800;
   let hs = 86; font(g, hs, 800, -0.03); while (Math.max(...COPY.headline.map(l => g.measureText(l).width)) > 952) { hs -= 2; font(g, hs, 800, -0.03); }
-  rise(g, COPY.headline[0], 64, 362 - hp, hs, C.ink, smooth(prog(t, 220, 14)), { weight: 800, track: -0.03 });
-  rise(g, COPY.headline[1], 64, 456 - hp, hs, C.ink, smooth(prog(t, 272, 14)), { weight: 800, track: -0.03 });
-}
-
-/* ---------------- scene 5: info card ("Daha ətraflı məlumat üçün 986 qısa nömrəsi ilə əlaqə saxla") ----------------
-   Ends on plain VTB navy (#04378F, sampled from the logo sting) so the cut into the sting is seamless. */
-const OUTRO = 427;   // story frame where the info card clears for the sting
-function drawScene5(g, t) {
-  if (t < EXP + 4) return;
-  if (t >= EXP + 18 || expandOf(t) >= 0.98) { g.fillStyle = C.navy; g.fillRect(0, 0, W, H); }
-  const gone = accel(prog(t, OUTRO, 12));            // everything lifts away before the sting
-  g.save(); g.globalAlpha = smooth(prog(t, EXP + 4, 14)) * (1 - gone);
-  for (const [px, py, r, a, per, ph] of [[300, 520, 620, 0.32, 160, 0], [820, 1420, 700, 0.26, 190, 2]]) {   // drifting light
-    const x = px + 60 * wave(RT, per, ph), y = py + 50 * wave(RT, per * 1.3, ph + 1);
-    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(21,183,249,${a})`); gr.addColorStop(1, "rgba(21,183,249,0)");
-    g.fillStyle = gr; g.fillRect(0, 0, W, H);
-  }
-  g.restore();
-  if (gone >= 1) return;
-  g.save(); g.globalAlpha = 1 - gone; g.translate(0, -180 * gone);
-  rise(g, COPY.info, 540, 760, 60, "#fff", smooth(prog(t, 311, 14)), { weight: 600, align: "center", alpha: 0.9 });
-  const ns = spring(t - 348, 0.28, 0.55);            // glossy 3D "986" lands on the word
-  if (ns > 0) { const id = idle(t, 2.2, 0.7); obj3D(g, O.n986, 540, 980 + id.bob, 620 * ns, [0.12 + id.rx, id.ry * 0.8 - (1 - ns) * 1.8, 0], { shadow: false }); }
-  rise(g, COPY.shortNum, 540, 1190, 48, "#fff", smooth(prog(t, 375, 14)), { weight: 600, align: "center", alpha: 0.85 });
-  const la = smooth(prog(t, 320, 14));
-  if (la > 0) {
-    g.save(); g.globalAlpha *= la * 0.72; font(g, 26, 600, 0); g.fillStyle = "#fff"; g.textAlign = "center";
-    const lines = []; let line = "";
-    for (const w of COPY.legal.split(" ")) { const tt = line ? line + " " + w : w; if (g.measureText(tt).width > 900) { lines.push(line); line = w; } else line = tt; }
-    lines.push(line); lines.forEach((l, k) => g.fillText(l, 540, 1410 + k * 36)); g.restore();
-  }
-  g.restore();
+  rise(g, COPY.headline[0], 64, 362 - hp, hs, "#fff", smooth(prog(t, 220, 14)), { weight: 800, track: -0.03 });
+  rise(g, COPY.headline[1], 64, 456 - hp, hs, "#fff", smooth(prog(t, 272, 14)), { weight: 800, track: -0.03 });
 }
 
 /* ---------------- one instant ---------------- */
 function drawAt(g, tReal) {
   RT = tReal; const t = toStory(tReal);
   g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; g.filter = "none";
-  g.fillStyle = C.canvas; g.fillRect(0, 0, W, H);
+  g.fillStyle = bgGradient(g); g.fillRect(0, 0, W, H);
   if (t < 162) drawScene12(g, t);
   if (t >= SCROLL && t < PULL) { const R = { ...BIG, y: BIG.y + scrollY(t, 3) + H }; drawAmount(g, t, R, R, 0); }
   if (t >= PULL && t < EXP + 20) drawScene4(g, t);
-  if (t >= EXP) {
-    g.save();
-    if (t < EXP + 18) { const ex = expandOf(t), R = lerpR(gridRects(t).fast.R, { x: 0, y: 0, w: W, h: H }, ex); rr(g, R.x, R.y, R.w, R.h, lerp(44, 0, clamp(ex))); g.clip(); }
-    drawScene5(g, t); g.restore();
-  }
+  if (t >= EXP + 20) { g.fillStyle = C.sting; g.fillRect(0, 0, W, H); }   // hand-off frame = first frame of the sting
 }
 
 /* ---------------- frame (sub-frame accumulation = real motion blur) ---------------- */
@@ -595,7 +539,7 @@ function renderFrame(f, sub = 1) {
   else {
     // more samples on the fast moves (shrink, scroll, pull-back, end-card expand) so the blur is smooth, not strobed
     const st = toStory(f);
-    const fast = (st >= 18 && st <= 40) || (st > 130 && st <= 162) || (st > 184 && st <= 208) || (st > 288 && st <= 312) || (st >= OUTRO && st <= OUTRO + 12);
+    const fast = (st >= 18 && st <= 40) || (st > 130 && st <= 162) || (st > 184 && st <= 208) || (st > 288 && st <= 312);
     const n = fast ? Math.max(sub, 12) : sub, shutter = 0.4;
     for (let i = 0; i < n; i++) {
       drawAt(ctx, Math.max(0, f + (i / (n - 1) - 0.5) * shutter));
@@ -610,13 +554,17 @@ function renderFrame(f, sub = 1) {
 window.FILM = { W, H, FPS, FRAMES, renderFrame };
 window.filmReady = (async () => {
   await Promise.all([
-    document.fonts.load('800 100px "Inter Tight"', "KOMİSSİYASIZ əİığşçöü 0123456789% ₼"),
-    document.fonts.load('600 100px "Inter Tight"', "Hər kəs üçün əİığşçöü"),
+    document.fonts.load('800 100px "VTB Group"', "ZAMİNSİZ əİığşçöü 0123456789% ₼"),
+    document.fonts.load('700 100px "VTB Group"', "Onlayn əİığşçöü"),
+    document.fonts.load('600 100px "VTB Group"', "Neft və mədənçıxarma işçilərinə"),
+    document.fonts.load('400 100px "VTB Group"', "Kredit illik"),
   ]);
-  const buf3 = await (await fetch("fonts/inter-tight-latin-800-normal.woff")).arrayBuffer();
+  const buf3 = await (await fetch("fonts/vtb/VTB95.OTF")).arrayBuffer();
   FONT3D = new Font(new TTFLoader().parse(buf3));
   build3D();
-  for (const k of ["work", "portrait"]) FOOTAGE[k] = (await loadImg(FOOTAGE_SRC[k])) || paintPlaceholder(k);
+  const imgs = await Promise.all(Array.from({ length: FOOTAGE_FRAMES }, (_, i) => loadImg(`footage/frames/${String(i + 1).padStart(4, "0")}.jpg`)));
+  FOOT.push(...imgs.filter(Boolean));
+  if (!FOOT.length) throw new Error("footage frames missing — run render.mjs (it extracts footage/frames/ from footage/worker.mp4)");
   return true;
 })();
 

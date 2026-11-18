@@ -22,10 +22,16 @@ const has = f => args.includes(f);
 const arg = f => { const i = args.indexOf(f); return i >= 0 ? args[i + 1] : null; };
 
 // Style frames: one per scene, each on a held moment.
-const STILLS = { "1-person": 12, "2-offer": 128, "3-amount": 180, "4-grid": 286, "5-end-card": 420 };
+const STILLS = { "1-person": 12, "2-offer": 170, "3-amount": 262, "4-grid": 410 };
 const SUB = +(arg("--sub") || 4);   // sub-frames per frame for motion blur
 
-const MIME = { ".html": "text/html", ".woff2": "font/woff2", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".js": "text/javascript", ".woff": "font/woff" };
+// footage frames for the page (footage/worker.mp4 → footage/frames/0001.jpg …)
+const FRAMES_DIR = path.join(DIR, "footage", "frames");
+if (!fs.existsSync(path.join(FRAMES_DIR, "0001.jpg"))) {
+  fs.mkdirSync(FRAMES_DIR, { recursive: true });
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", path.join(DIR, "footage", "worker.mp4"), "-q:v", "2", path.join(FRAMES_DIR, "%04d.jpg")], { stdio: "inherit" });
+}
+const MIME = { ".html": "text/html", ".woff2": "font/woff2", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".js": "text/javascript", ".woff": "font/woff", ".otf": "font/otf", ".OTF": "font/otf" };
 const server = http.createServer((req, res) => {
   const p = path.join(DIR, decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (!p.startsWith(DIR) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end(); }
@@ -69,7 +75,7 @@ if (arg("--frames")) {
     const STING = path.join(DIR, "assets", "vtb-logo-sting.mp4"), STING_LEN = 2.1;
     const filmLen = FRAMES / FPS, total = filmLen + STING_LEN;
     // [from, to] in voiceover.wav → start time in the film (s). Cuts sit in pauses (4.72, 10.42) or a word gap (5.99).
-    const VO = [[0, 4.72, 0], [4.72, 5.99, 6.22], [5.99, 10.42, 8.95], [10.42, 14.4, 14.85]];
+    const VO = [[0, 4.72, 0], [4.72, 5.99, 6.22], [5.99, 10.42, 8.95]];   // the "986" line (10.42–14.4) is dropped with its scene
     const voF = VO.map(([a, b, at], k) => `[v${k}]atrim=${a}:${b},asetpts=PTS-STARTPTS,afade=t=in:d=0.01,afade=t=out:st=${(b - a - 0.012).toFixed(3)}:d=0.012,adelay=${Math.round(at * 1000)}:all=1[c${k}]`);
     const filter = [
       `[0:v]format=yuv420p,setsar=1[fv]`,

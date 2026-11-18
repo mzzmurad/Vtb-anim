@@ -1,10 +1,11 @@
-# VTB Bank — Cash loan · 21.3 s vertical (1080×1920)
+# VTB Bank — Cash loan · 17.1 s vertical (1080×1920)
 
 Working animatic of the motion brief (Nov 18, 2026). The film is drawn in code, frame by frame, so every cue in the brief lands on its exact frame.
 
 | File | What |
 |---|---|
-| `out/vtb-cash-loan-1080x1920-30fps.mp4` | 21.3 s (19.2 s film + 2.1 s VTB logo sting), H.264, voiceover + soft SFX |
+| `out/vtb-cash-loan-1080x1920-30fps.mp4` | 17.1 s (15.0 s film + 2.1 s VTB logo sting), H.264, voiceover + soft SFX |
+| `footage/worker.mp4` | Oil-worker footage (1280×720, 5 s, ping-pong looped). `render.mjs` extracts it to `footage/frames/` |
 | `assets/vtb-logo-sting.mp4` | VTB logo animation appended as the ending (first 2.1 s used) |
 | `audio/voiceover.wav` | The voiceover the film is timed to |
 | `out/style-frames/scene-*.png` | 5 style frames, 1080×1920, one per scene |
@@ -14,18 +15,21 @@ Working animatic of the motion brief (Nov 18, 2026). The film is drawn in code, 
 
 Preview: `npx serve films/vtb-cash-loan` (or any static server), then open `/film.html`.
 
-## Timed to the voiceover, with reading holds (v4)
-Each condition gets a hold so people can read it. The voiceover is cut into four phrases at its pauses and placed around those holds, and the film ends on the supplied VTB logo sting.
+## Current cut (v5)
+- **Footage:** the worker clip replaces the placeholder: full frame, then the top card, then the portrait tile.
+- **Colour:** the client gradient `#0250BF → #67C6FF` is the background throughout, with white tiles on it. The "Sürətli" tile grows into VTB navy `#04378F`, which is the first frame of the logo sting.
+- **Type:** VTB Group (Book, Demi Bold, Bold, Extra Bold) for all text and the 3D numerals, set about 1.5% tighter.
+- **986 card removed:** its voiceover line ("Daha ətraflı məlumat üçün 986…") is dropped too. The legal line now sits under the grid.
 
 | Film time | Voiceover phrase | On screen |
 |---|---|---|
-| 0.0–6.0 s | Bank VTB-dən səhiyyə işçiləri üçün 9,9%-dən başlayan zaminsiz kredit | Person → card, audience pill, 9,9%-dən, "Zaminsiz kredit" (held ~1.7 s after the line) |
-| 6.0–9.2 s | 100 min manata dək məbləği | Scroll to 3D "100 000", the coin and "AZN-dək nağd kredit" (held ~2 s) |
-| 9.0–14.2 s | VTB.az saytından onlayn və ya ən yaxın filialda sürətli rəsmiləşdir | Grid; the Onlayn, Filialda and Sürətli tiles tick on their words (held ~1.5 s) |
-| 14.2–19.2 s | Daha ətraflı məlumat üçün 986 qısa nömrəsi ilə əlaqə saxla | Info card with 3D "986", "qısa nömrə" and legal; then it clears to plain VTB navy |
-| 19.2–21.3 s | — | VTB logo sting |
+| 0.0–6.0 s | Bank VTB-dən səhiyyə işçiləri üçün 9,9%-dən başlayan zaminsiz kredit | Worker, then a card, the audience pill, 9,9%-dən and "Zaminsiz kredit" |
+| 6.0–9.2 s | 100 min manata dək məbləği | 3D "100 000", the coin and "AZN-dək nağd kredit" |
+| 9.0–15.0 s | VTB.az saytından onlayn və ya ən yaxın filialda sürətli rəsmiləşdir | Grid ticks with the voice, then the legal line; the navy tile expands |
+| 15.0–17.1 s | — | VTB logo sting |
 
-The timing lives in `HOLDS` in `film.html` and `sfx.py`, and in the `VO` placements in `render.mjs`. Navy is `#04378F`, sampled from the sting, so the cut is seamless.
+### Fonts (not in git)
+The repo is public, so the licensed **VTB Group** fonts are git-ignored. Put `VTB55.OTF`, `VTB65.OTF`, `VTB75.OTF` and `VTB95.OTF` in `fonts/vtb/` before rendering.
 
 The voiceover still says **səhiyyə işçiləri**, while the screen says **neft və mədənçıxarma işçilərinə**. Re-record the voiceover line to match.
 
