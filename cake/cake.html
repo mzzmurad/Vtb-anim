@@ -391,14 +391,14 @@ function cutExtent(i, t) {
 const WIDE = { pos: V(-0.2, 21.5, 10.5), tgt: V(-0.2, 0, -1.2), fov: 34 };
 const CLOSE_OFF = V(1.6, 4.6, 7.4), CLOSE_FOV = 36;
 const ROT = new THREE.Matrix4().makeRotationY(CAKE_YAW);
-function focusAt(t) {             // blade centre, averaged over the last ~0.6 s so the camera trails smoothly
-  let x = 0, z = 0, w = 0;
-  for (let k = 0; k < 16; k++) {
-    const tt = Math.max(0, t - k * 0.04), wk = 1 - k / 16;
+function focusAt(t) {             // blade centre, averaged over ~1.2 s around t and damped toward the cake centre,
+  let x = 0, z = 0, w = 0;        // so the camera drifts with the knife instead of whipping after it
+  for (let k = -20; k <= 20; k++) {
+    const tt = Math.max(0, t + k * 0.03), wk = Math.cos(k / 21 * Math.PI / 2) ** 2;
     const kn = knifeAt(tt);
     x += (kn.x + BLADE_L * KS * 0.45) * wk; z += kn.z * wk; w += wk;
   }
-  return V(Math.min(3.6, Math.max(-3.6, x / w)), TOP_Y * 0.7, z / w);
+  return V(Math.min(2.6, Math.max(-2.6, 0.55 * x / w)), TOP_Y * 0.7, z / w);
 }
 const T_OUT0 = () => T_SPLIT_B + 0.2, T_OUT1 = () => T_SPLIT_B + 2.0;
 function shotAt(t) {
