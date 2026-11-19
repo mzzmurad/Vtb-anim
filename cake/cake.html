@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VTB Cake Logo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg: #111; }
+  html, body { margin: 0; background: var(--bg); height: 100%; }
+  body { display: flex; align-items: center; justify-content: center; }
+  #c { height: 100vh; width: auto; max-width: 100vw; aspect-ratio: 9 / 16; display: block; }
+  #gl { display: none; }
+  body.render #c { height: 1920px; width: 1080px; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "../vendor/three/build/three.module.min.js", "three/addons/": "../vendor/three/examples/jsm/" } }
+</script>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script type="module">
+import * as THREE from "three";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+
+// ---------------------------------------------------------------- setup
+const W = 1080, H = 1920, FPS = 30, DUR = 6.0, FRAMES = Math.round(DUR * FPS);
+const params = new URLSearchParams(location.search);
+const RENDER = params.has("render");
+if (RENDER) document.body.classList.add("render");
+
+const C = {
+  bg: "#F8E831",          // yellow stage, as in the reference
+  shadow: "#9c7f00",
+  logo: "#00AEEF",        // VTB blue, sampled from the supplied logo
+  icing: "#00AEEF",
+  navy: "#04378F",
+  sky: "#8FD8F8",
+  cream: "#FFFFFF",
+  sponge: "#F2C744",
+  rosette: "#FFFFFF",
+};
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.domElement.id = "gl";
+document.body.appendChild(renderer.domElement);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.NoToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(C.bg);
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.45;
+
+const camera = new THREE.PerspectiveCamera(30, W / H, 0.05, 200);
+
+scene.add(new THREE.HemisphereLight("#ffffff", "#d9c24a", 1.25));
+const sun = new THREE.DirectionalLight("#fffaf0", 2.3);
+sun.position.set(-8, 8, -7);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
+sun.shadow.bias = -0.0004;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 3;
+scene.add(sun, sun.target);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ color: C.shadow, opacity: 0.42 }));
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ---------------------------------------------------------------- logo geometry
+// The supplied logo, in its own pixels (820 × 505): three slanted bars.
+const LOGO = [
+  [[183, 0], [820, 0], [773, 126], [137, 126]],
+  [[114, 190], [750, 190], [704, 316], [68, 316]],
+  [[45, 378], [681, 378], [636, 504], [0, 504]],
+];
+const S = 1 / 100, CX = 410, CY = 252;
+const toW = ([x, y]) => [(x - CX) * S, (y - CY) * S];          // → world x, z
+const SLANT = 46 / 126;                                          // x shift per px of height
+// a bar's "top-edge x" for any point: lets us cut bars into pieces along the slant
+const edgeX = (bar, px, py) => px + (py - LOGO[bar][0][1]) * SLANT;
+
+// cuts (top-edge x) per bar → pieces. Bar 3 carries the candle and the slice.
+const CUTS = { 0: [], 1: [], 2: [235, 352] };
+const SLICE = { bar: 2, piece: 1 };
+
+function piecePoly(bar, a, b) {   // parallelogram between top-edge x a and b (logo px)
+  const [[x0, y0], [x1], , [x3, y3]] = LOGO[bar];
+  const h = y3 - y0, d = x0 - x3;
+  const A = a ?? x0, B = b ?? x1;
+  return [[A, y0], [B, y0], [B - d, y3], [A - d, y3]];
+}
+
+const HEIGHT_LAYERS = [ // bottom → top
+  [C.navy, 0.15, "cream"],
+  [C.sponge, 0.2, "sponge"],
+  [C.sky, 0.13, "cream"],
+  [C.sponge, 0.2, "sponge"],
+  [C.cream, 0.1, "cream"],
+];
+const ICING_H = 0.09, BEVEL = 0.04;
+const CAKE_H = HEIGHT_LAYERS.reduce((s, l) => s + l[1], 0);
+const TOP_Y = CAKE_H + ICING_H + BEVEL;
+
+function roundedShape(pts, radii) {
+  const s = new THREE.Shape(), n = pts.length;
+  const P = pts.map(p => { const [x, z] = toW(p); return new THREE.Vector2(x, -z); });
+  for (let i = 0; i < n; i++) {
+    const p = P[i], prev = P[(i + n - 1) % n], next = P[(i + 1) % n], r = radii[i];
+    const a = p.clone().add(prev.clone().sub(p).setLength(r));
+    const b = p.clone().add(next.clone().sub(p).setLength(r));
+    if (i === 0) s.moveTo(a.x, a.y); else s.lineTo(a.x, a.y);
+    s.quadraticCurveTo(p.x, p.y, b.x, b.y);
+  }
+  s.closePath();
+  return s;
+}
+
+// sponge texture: warm crumb speckles
+function spongeTexture() {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 512;
+  const g = cv.getContext("2d");
+  g.fillStyle = C.sponge; g.fillRect(0, 0, 512, 512);
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 9000; i++) {
+    const r = 0.6 + rnd() * 2.2, l = rnd();
+    g.fillStyle = l < 0.5 ? `rgba(196,140,20,${0.25 + rnd() * 0.35})` : `rgba(255,236,150,${0.3 + rnd() * 0.4})`;
+    g.beginPath(); g.arc(rnd() * 512, rnd() * 512, r, 0, Math.PI * 2); g.fill();
+  }
+  const t = new THREE.CanvasTexture(cv);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(1.6, 1.6); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const SPONGE_TEX = spongeTexture();
+const mats = {
+  icing: new THREE.MeshStandardMaterial({ color: C.icing, roughness: 0.42, metalness: 0 }),
+  sponge: new THREE.MeshStandardMaterial({ color: "#ffffff", map: SPONGE_TEX, roughness: 0.95, bumpMap: SPONGE_TEX, bumpScale: 1.5 }),
+  rosette: new THREE.MeshStandardMaterial({ color: C.rosette, roughness: 0.42 }),
+};
+const creamMat = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 });
+
+function makePiece(poly, radii) {
+  const g = new THREE.Group();
+  const shape = roundedShape(poly, radii);
+  let y = 0;
+  for (const [col, h, kind] of HEIGHT_LAYERS) {
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 6 });
+    geo.rotateX(-Math.PI / 2); geo.translate(0, y, 0);
+    const m = new THREE.Mesh(geo, kind === "sponge" ? mats.sponge : creamMat(col));
+    m.castShadow = m.receiveShadow = true; g.add(m); y += h;
+  }
+  const ig = new THREE.ExtrudeGeometry(shape, { depth: ICING_H, bevelEnabled: true, bevelThickness: BEVEL, bevelSize: BEVEL, bevelSegments: 5, curveSegments: 8 });
+  ig.rotateX(-Math.PI / 2); ig.translate(0, y + BEVEL * 0.2, 0);
+  const im = new THREE.Mesh(ig, mats.icing); im.castShadow = im.receiveShadow = true; g.add(im);
+  return g;
+}
+
+// piped cream rosette: a ridged, twisted dollop
+function rosetteGeometry() {
+  const prof = [[0, 0], [0.125, 0], [0.13, 0.03], [0.115, 0.07], [0.085, 0.12], [0.05, 0.17], [0.018, 0.215], [0, 0.23]]
+    .map(([r, y]) => new THREE.Vector2(r, y));
+  const geo = new THREE.LatheGeometry(prof, 64);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const th = Math.atan2(z, x), r = Math.hypot(x, z);
+    const k = 1 + 0.26 * Math.pow(Math.max(0, Math.cos(8 * th + y * 9)), 0.7) - 0.08;
+    p.setXYZ(i, Math.cos(th) * r * k, y, Math.sin(th) * r * k);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+const ROSETTE = rosetteGeometry();
+const SPRINKLE = new THREE.CapsuleGeometry(0.018, 0.05, 3, 8);
+const SPRINKLE_COLS = ["#ff4d6d", "#00AEEF", "#04378F", "#2ec27e", "#ffb000", "#ffffff", "#a06cff"].map(c => new THREE.Color(c));
+
+// ---------------------------------------------------------------- build the cake
+const rig = new THREE.Group();     // whole cake (slides in / out)
+const cake = new THREE.Group();    // fixed orientation
+rig.add(cake);
+scene.add(rig);
+const CAKE_YAW = 0.42;
+cake.rotation.y = CAKE_YAW;
+
+let rnd = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+const pieceGroups = [];
+let sliceGroup, candle, flame;
+
+LOGO.forEach((bar, bi) => {
+  const cuts = CUTS[bi];
+  const bounds = [null, ...cuts, null];
+  const pieces = [];
+  for (let k = 0; k < bounds.length - 1; k++) {
+    const poly = piecePoly(bi, bounds[k], bounds[k + 1]);
+    const R = 0.13, r0 = 0.012;
+    const radii = [bounds[k] == null ? R : r0, bounds[k + 1] == null ? R : r0, bounds[k + 1] == null ? R : r0, bounds[k] == null ? R : r0];
+    const grp = new THREE.Group();
+    grp.add(makePiece(poly, radii));
+    cake.add(grp);
+    pieces.push({ grp, a: bounds[k] ?? -1e9, b: bounds[k + 1] ?? 1e9 });
+    if (bi === SLICE.bar && k === SLICE.piece) sliceGroup = grp;
+  }
+  pieceGroups.push(pieces);
+  const which = (px, py) => pieces.find(p => { const e = edgeX(bi, px, py); return e >= p.a && e < p.b; }) || pieces[0];
+
+  // rosettes around the outer edge (not along cuts)
+  const full = roundedShape(bar, [0.13, 0.13, 0.13, 0.13]);
+  const per = full.getLength(), n = Math.round(per / 0.19);
+  const pts = full.getSpacedPoints(n);
+  const [cx, cz] = toW([bar.reduce((s, p) => s + p[0], 0) / 4, bar.reduce((s, p) => s + p[1], 0) / 4]);
+  const byPiece = new Map();
+  for (let i = 0; i < n; i++) {
+    const a = pts[i], b = pts[(i + 1) % n];
+    let nx = b.y - a.y, nz = -(b.x - a.x);   // in world (x, z=-shapeY)
+    const tx = b.x - a.x, tz = -(b.y - a.y);
+    let ox = tz, oz = -tx; const L = Math.hypot(ox, oz) || 1; ox /= L; oz /= L;
+    const wx = a.x, wz = -a.y;
+    if ((wx - cx) * ox + (wz - cz) * oz < 0) { ox = -ox; oz = -oz; }
+    const px = wx / S + CX, py = wz / S + CY;
+    const pc = which(px, py);
+    if (!byPiece.has(pc)) byPiece.set(pc, []);
+    byPiece.get(pc).push([wx + ox * 0.07, wz + oz * 0.07, rnd()]);
+  }
+  for (const [pc, list] of byPiece) {
+    const inst = new THREE.InstancedMesh(ROSETTE, mats.rosette, list.length);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion();
+    list.forEach(([x, z, r], i) => {
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), r * 6.28);
+      const sc = 0.95 + r * 0.12;
+      m.compose(new THREE.Vector3(x, 0, z), q, new THREE.Vector3(sc, sc * (0.95 + r * 0.15), sc));
+      inst.setMatrixAt(i, m);
+    });
+    inst.castShadow = inst.receiveShadow = true;
+    pc.grp.add(inst);
+  }
+
+  // sprinkles on top
+  const [[x0, y0], , , [x3, y3]] = bar;
+  const sp = new Map();
+  const count = bi === 2 ? 70 : 45;
+  for (let i = 0; i < count; i++) {
+    let px, py;
+    if (bi === 2 && i < 40) { px = 60 + rnd() * 300; } else { px = x0 + 30 + rnd() * (bar[1][0] - x0 - 60); }
+    py = y0 + 18 + rnd() * (y3 - y0 - 36);
+    px -= (py - y0) * SLANT;
+    const pc = which(px, py);
+    if (!sp.has(pc)) sp.set(pc, []);
+    sp.get(pc).push([...toW([px, py]), rnd(), rnd(), Math.floor(rnd() * SPRINKLE_COLS.length)]);
+  }
+  for (const [pc, list] of sp) {
+    const inst = new THREE.InstancedMesh(SPRINKLE, new THREE.MeshStandardMaterial({ roughness: 0.35 }), list.length);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+    list.forEach(([x, z, r1, r2, ci], i) => {
+      e.set(Math.PI / 2, 0, r1 * 6.28); q.setFromEuler(e);
+      m.compose(new THREE.Vector3(x, TOP_Y + 0.012, z), q, new THREE.Vector3(1, 1, 1));
+      inst.setMatrixAt(i, m); inst.setColorAt(i, SPRINKLE_COLS[ci]);
+    });
+    inst.castShadow = true;
+    pc.grp.add(inst);
+  }
+});
+
+// candle: blue / white spiral, on the left end of the bottom bar
+{
+  const cv = document.createElement("canvas"); cv.width = 256; cv.height = 512;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#ffffff"; g.fillRect(0, 0, 256, 512);
+  g.fillStyle = "#1f7fe0";
+  for (let k = -4; k < 8; k++) {
+    g.beginPath();
+    g.moveTo(0, k * 96); g.lineTo(256, k * 96 - 160); g.lineTo(256, k * 96 - 110); g.lineTo(0, k * 96 + 50); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const CH = 0.62, CR = 0.062;
+  candle = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(CR, CR, CH, 40), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38 }));
+  body.position.y = CH / 2; body.castShadow = true; candle.add(body);
+  const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 8), new THREE.MeshStandardMaterial({ color: "#3a2a1a" }));
+  wick.position.y = CH + 0.035; candle.add(wick);
+  const fg = new THREE.SphereGeometry(0.045, 24, 16); fg.scale(1, 2.1, 1);
+  flame = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: "#ffb21f" }));
+  flame.position.y = CH + 0.12; candle.add(flame);
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 12).scale(1, 2, 1), new THREE.MeshBasicMaterial({ color: "#fff6c8" }));
+  core.position.y = -0.02; flame.add(core);
+  const [x, z] = toW([128, 441]);
+  candle.position.set(x, TOP_Y - 0.01, z);
+  pieceGroups[2][0].grp.add(candle);
+}
+
+// ---------------------------------------------------------------- timeline
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const clamp01 = x => Math.min(1, Math.max(0, x));
+const ease = {
+  inOut: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  out: t => 1 - Math.pow(1 - t, 3),
+  outQuint: t => 1 - Math.pow(1 - t, 5),
+  in: t => t * t * t,
+  inQuart: t => t * t * t * t,
+};
+const seg = (t, a, b, e = ease.inOut) => e(clamp01((t - a) / (b - a)));
+const lerpV = (a, b, k) => a.clone().lerp(b, k);
+
+// camera shots (cake space)
+// WIDE is in world space (the cake sits turned on the table); the close-ups are in cake space.
+const WIDE = { pos: V(0.1, 15.0, 21.0), tgt: V(0.0, 0, -1.3), fov: 34 };
+const CLOSE_A = { pos: V(-2.1, 3.2, 6.0), tgt: V(-2.75, 0.7, 1.9), fov: 36 };   // candle end
+const CLOSE_B = { pos: V(-0.9, 3.1, 6.2), tgt: V(-1.6, 0.6, 2.0), fov: 37 };    // drifted along the bar, onto the slice
+const ROT = new THREE.Matrix4().makeRotationY(CAKE_YAW);
+for (const sh of [CLOSE_A, CLOSE_B]) { sh.pos.applyMatrix4(ROT); sh.tgt.applyMatrix4(ROT); }
+
+function shotAt(t) {
+  let s;
+  if (t < 1.95) s = WIDE;
+  else if (t < 4.3) {
+    const k = seg(t, 1.95, 4.3, x => x); // linear drift, like a slow dolly
+    s = { pos: lerpV(CLOSE_A.pos, CLOSE_B.pos, k), tgt: lerpV(CLOSE_A.tgt, CLOSE_B.tgt, k), fov: CLOSE_A.fov + (CLOSE_B.fov - CLOSE_A.fov) * k };
+  } else {
+    const k = seg(t, 4.3, 5.25, ease.inOut);
+    // pull back on an arc: rise first, then settle
+    const pos = lerpV(CLOSE_B.pos, WIDE.pos, k);
+    pos.y += Math.sin(k * Math.PI) * 0.8;
+    s = { pos, tgt: lerpV(CLOSE_B.tgt, WIDE.tgt, k), fov: CLOSE_B.fov + (WIDE.fov - CLOSE_B.fov) * k };
+  }
+  // a whisper of handheld-free drift on the wide
+  const drift = Math.sin(t * 1.1) * 0.08;
+  return { pos: s.pos.clone().add(V(drift, 0, 0)), tgt: s.tgt, fov: s.fov };
+}
+
+function rigAt(t) {
+  // out: slides left, accelerating (1.0–1.6 s)
+  const out = seg(t, 1.0, 1.6, ease.inQuart);
+  // in: arrives from top-right, decelerating (1.95–2.7 s)
+  const inn = 1 - seg(t, 1.95, 2.75, ease.outQuint);
+  const p = V(-16 * out, 0, -2.0 * out);
+  if (t >= 1.95) p.set(7.5 * inn, 0, -6.5 * inn);
+  const yaw = t >= 1.95 ? -0.35 * inn : 0.12 * out;
+  return { p, yaw };
+}
+
+function sliceAt(t) {
+  const o = seg(t, 3.1, 3.8, ease.out) - seg(t, 4.45, 5.0, ease.inOut);
+  return { z: 0.62 * o, x: 0.12 * o, y: 0 };
+}
+
+const logoPath = (() => {
+  const p = new Path2D();
+  for (const bar of LOGO) { p.moveTo(...bar[0]); for (const q of bar.slice(1)) p.lineTo(...q); p.closePath(); }
+  return p;
+})();
+
+function setScene(t) {
+  const r = rigAt(t);
+  rig.position.copy(r.p); rig.rotation.y = r.yaw;
+  const sl = sliceAt(t);
+  sliceGroup.position.set(sl.x, sl.y, sl.z);
+  flame.scale.set(1 + Math.sin(t * 31) * 0.06, 1 + Math.sin(t * 23 + 1) * 0.1, 1);
+  flame.rotation.z = Math.sin(t * 17) * 0.08;
+  const s = shotAt(t);
+  camera.position.copy(s.pos); camera.fov = s.fov; camera.updateProjectionMatrix();
+  camera.lookAt(s.tgt);
+}
+
+// ---------------------------------------------------------------- frame
+const out = document.getElementById("c");
+const ctx = out.getContext("2d");
+function renderFrame(f, sub = 1) {
+  const shutter = 0.5; // 180°
+  ctx.globalCompositeOperation = "source-over";
+  for (let s = 0; s < sub; s++) {
+    const tf = sub === 1 ? f : f + ((s + 0.5) / sub - 0.5) * shutter;
+    setScene(Math.max(0, tf) / FPS);
+    renderer.render(scene, camera);
+    ctx.globalAlpha = 1 / (s + 1);
+    ctx.drawImage(renderer.domElement, 0, 0);
+  }
+  ctx.globalAlpha = 1;
+  // flat logo, top centre
+  const lw = 200, sc = lw / 820;
+  ctx.save();
+  ctx.translate(W / 2 - lw / 2, 205);
+  ctx.scale(sc, sc);
+  ctx.fillStyle = C.logo;
+  ctx.fill(logoPath);
+  ctx.restore();
+}
+
+window.FILM = { FRAMES, FPS, renderFrame };
+window.filmReady = true;
+
+if (!RENDER) {
+  const f0 = params.has("f") ? +params.get("f") : null;
+  if (f0 != null) renderFrame(f0, 1);
+  else {
+    const t0 = performance.now();
+    const loop = () => { renderFrame(((performance.now() - t0) / 1000 * FPS) % FRAMES, 1); requestAnimationFrame(loop); };
+    loop();
+  }
+}
+</script>
+</body>
+</html>

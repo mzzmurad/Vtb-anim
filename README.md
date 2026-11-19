@@ -49,3 +49,16 @@ The voiceover still says **səhiyyə işçiləri**, while the screen says **neft
 - **Colours and type**: these are approximations. Edit `C` in `film.html` to apply the brandbook values.
 - **Copy**: the draft Azerbaijani copy sits in `COPY` in `film.html`. The offer figures (100 000 AZN, from 9,9 %, 0 % commission) come from the 4 Sep 2026 vtb.az campaign. Audience line, lockup, headline, tagline and legal all need sign-off.
 - **Audio**: replace with the licensed track and SFX.
+
+## VTB cake logo (Nov 19, 2026)
+A 6 s vertical loop in the style of the 3D "birthday cake logo" reference: the three VTB bars are built as layered cakes (VTB-blue icing, cream and sponge layers, a navy base, piped cream rosettes, sprinkles and a candle) on a yellow table, with the flat logo at the top.
+
+| Time | Shot |
+|---|---|
+| 0.0–1.0 s | Wide: the cake logo on the table |
+| 1.0–1.9 s | The cake slides out left, the frame is empty |
+| 1.9–4.3 s | It sweeps in close from top-right; the camera drifts past the candle while a slice pulls out |
+| 4.3–6.0 s | The slice settles back and the camera pulls out to the wide shot, which matches frame 0 so it loops |
+
+- `cake/cake.html`: the scene (three.js). Open it over http to play it, or use `?f=90` for one frame. Colours are in `C`, shots in `WIDE`, `CLOSE_A` and `CLOSE_B`, timing in `rigAt`, `shotAt` and `sliceAt`.
+- `node cake/render.mjs` writes `out/vtb-cake-logo-1080x1920-30fps.mp4` (no audio).
