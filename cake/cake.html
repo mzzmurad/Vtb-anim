@@ -22,22 +22,24 @@
 import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
+// One whole cake → a knife makes four cuts → the two cut strips slide out → the three VTB bars remain.
+
 // ---------------------------------------------------------------- setup
-const W = 1080, H = 1920, FPS = 30, DUR = 6.0, FRAMES = Math.round(DUR * FPS);
+const W = 1080, H = 1920, FPS = 30, DUR = 7.5, FRAMES = Math.round(DUR * FPS);
 const params = new URLSearchParams(location.search);
 const RENDER = params.has("render");
 if (RENDER) document.body.classList.add("render");
 
 const C = {
-  bg: "#F8E831",          // yellow stage, as in the reference
-  shadow: "#9c7f00",
-  logo: "#00AEEF",        // VTB blue, sampled from the supplied logo
-  icing: "#00AEEF",
+  bgTop: "#0755C2", bgBottom: "#67C6FF",   // the supplied background gradient
+  shadow: "#00225e",
+  logo: "#FFFFFF",
+  icing: "#FFFFFF",
   navy: "#04378F",
-  sky: "#8FD8F8",
-  cream: "#FFFFFF",
+  blue: "#00AEEF",
   sponge: "#F2C744",
   rosette: "#FFFFFF",
+  cut: "#8aa3c2",
 };
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
@@ -51,63 +53,58 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(C.bg);
+{
+  const cv = document.createElement("canvas"); cv.width = 4; cv.height = 512;
+  const g = cv.getContext("2d"), gr = g.createLinearGradient(0, 0, 0, 512);
+  gr.addColorStop(0, C.bgTop); gr.addColorStop(1, C.bgBottom);
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 512);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
+  scene.background = t;
+}
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 scene.environmentIntensity = 0.45;
 
 const camera = new THREE.PerspectiveCamera(30, W / H, 0.05, 200);
 
-scene.add(new THREE.HemisphereLight("#ffffff", "#d9c24a", 1.25));
-const sun = new THREE.DirectionalLight("#fffaf0", 2.3);
+scene.add(new THREE.HemisphereLight("#ffffff", "#7fb4e6", 1.2));
+const sun = new THREE.DirectionalLight("#fffaf0", 2.2);
 sun.position.set(-8, 8, -7);
 sun.castShadow = true;
 sun.shadow.mapSize.set(4096, 4096);
-Object.assign(sun.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9, near: 1, far: 40 });
+Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: 1, far: 40 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
 sun.shadow.radius = 3;
 scene.add(sun, sun.target);
 
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ color: C.shadow, opacity: 0.42 }));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ color: C.shadow, opacity: 0.38 }));
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
 // ---------------------------------------------------------------- logo geometry
-// The supplied logo, in its own pixels (820 × 505): three slanted bars.
-const LOGO = [
-  [[183, 0], [820, 0], [773, 126], [137, 126]],
-  [[114, 190], [750, 190], [704, 316], [68, 316]],
-  [[45, 378], [681, 378], [636, 504], [0, 504]],
-];
+// The supplied logo, in its own pixels (820 × 505). The three bars are exactly one
+// slanted slab with two horizontal strips removed — so the cake is that slab, cut twice per strip.
+const SL = 183 / 504;                         // ends slant: x shrinks by SL per px down
+const XL = y => 183 - y * SL, XR = y => 820 - y * SL;
+const quad = (y0, y1) => [[XL(y0), y0], [XR(y0), y0], [XR(y1), y1], [XL(y1), y1]];
+const BAND = {            // final pieces, top to bottom
+  bar1: [0, 126], stripA: [126, 190], bar2: [190, 316], stripB: [316, 378], bar3: [378, 504],
+};
+const ORDER = ["bar1", "stripA", "bar2", "stripB", "bar3"];
 const S = 1 / 100, CX = 410, CY = 252;
 const toW = ([x, y]) => [(x - CX) * S, (y - CY) * S];          // → world x, z
-const SLANT = 46 / 126;                                          // x shift per px of height
-// a bar's "top-edge x" for any point: lets us cut bars into pieces along the slant
-const edgeX = (bar, px, py) => px + (py - LOGO[bar][0][1]) * SLANT;
 
-// cuts (top-edge x) per bar → pieces. Bar 3 carries the candle and the slice.
-const CUTS = { 0: [], 1: [], 2: [235, 352] };
-const SLICE = { bar: 2, piece: 1 };
-
-function piecePoly(bar, a, b) {   // parallelogram between top-edge x a and b (logo px)
-  const [[x0, y0], [x1], , [x3, y3]] = LOGO[bar];
-  const h = y3 - y0, d = x0 - x3;
-  const A = a ?? x0, B = b ?? x1;
-  return [[A, y0], [B, y0], [B - d, y3], [A - d, y3]];
-}
-
-const HEIGHT_LAYERS = [ // bottom → top
+const LAYERS = [ // bottom → top
   [C.navy, 0.15, "cream"],
   [C.sponge, 0.2, "sponge"],
-  [C.sky, 0.13, "cream"],
+  [C.blue, 0.12, "cream"],
   [C.sponge, 0.2, "sponge"],
-  [C.cream, 0.1, "cream"],
 ];
-const ICING_H = 0.09, BEVEL = 0.04;
-const CAKE_H = HEIGHT_LAYERS.reduce((s, l) => s + l[1], 0);
-const TOP_Y = CAKE_H + ICING_H + BEVEL;
+const ICING_H = 0.17;
+const CAKE_H = LAYERS.reduce((s, l) => s + l[1], 0);
+const TOP_Y = CAKE_H + ICING_H;
 
 function roundedShape(pts, radii) {
   const s = new THREE.Shape(), n = pts.length;
@@ -117,13 +114,12 @@ function roundedShape(pts, radii) {
     const a = p.clone().add(prev.clone().sub(p).setLength(r));
     const b = p.clone().add(next.clone().sub(p).setLength(r));
     if (i === 0) s.moveTo(a.x, a.y); else s.lineTo(a.x, a.y);
-    s.quadraticCurveTo(p.x, p.y, b.x, b.y);
+    if (r > 0) s.quadraticCurveTo(p.x, p.y, b.x, b.y);
   }
   s.closePath();
   return s;
 }
 
-// sponge texture: warm crumb speckles
 function spongeTexture() {
   const cv = document.createElement("canvas"); cv.width = cv.height = 512;
   const g = cv.getContext("2d");
@@ -140,29 +136,30 @@ function spongeTexture() {
 }
 const SPONGE_TEX = spongeTexture();
 const mats = {
-  icing: new THREE.MeshStandardMaterial({ color: C.icing, roughness: 0.42, metalness: 0 }),
+  icing: new THREE.MeshStandardMaterial({ color: C.icing, roughness: 0.5 }),
   sponge: new THREE.MeshStandardMaterial({ color: "#ffffff", map: SPONGE_TEX, roughness: 0.95, bumpMap: SPONGE_TEX, bumpScale: 1.5 }),
   rosette: new THREE.MeshStandardMaterial({ color: C.rosette, roughness: 0.42 }),
+  navy: new THREE.MeshStandardMaterial({ color: C.navy, roughness: 0.5 }),
+  blue: new THREE.MeshStandardMaterial({ color: C.blue, roughness: 0.45 }),
 };
-const creamMat = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 });
+const layerMat = (col, kind) => kind === "sponge" ? mats.sponge : col === C.navy ? mats.navy : mats.blue;
 
-function makePiece(poly, radii) {
+// a cake body over logo rows y0..y1; outer corners of the whole slab are rounded
+const R = 0.14;
+function makeBody(y0, y1) {
   const g = new THREE.Group();
-  const shape = roundedShape(poly, radii);
+  const radii = [y0 === 0 ? R : 0, y0 === 0 ? R : 0, y1 === 504 ? R : 0, y1 === 504 ? R : 0];
+  const shape = roundedShape(quad(y0, y1), radii);
   let y = 0;
-  for (const [col, h, kind] of HEIGHT_LAYERS) {
-    const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 6 });
+  for (const [col, h, kind] of [...LAYERS, [C.icing, ICING_H, "icing"]]) {
+    const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, curveSegments: 8 });
     geo.rotateX(-Math.PI / 2); geo.translate(0, y, 0);
-    const m = new THREE.Mesh(geo, kind === "sponge" ? mats.sponge : creamMat(col));
+    const m = new THREE.Mesh(geo, kind === "icing" ? mats.icing : layerMat(col, kind));
     m.castShadow = m.receiveShadow = true; g.add(m); y += h;
   }
-  const ig = new THREE.ExtrudeGeometry(shape, { depth: ICING_H, bevelEnabled: true, bevelThickness: BEVEL, bevelSize: BEVEL, bevelSegments: 5, curveSegments: 8 });
-  ig.rotateX(-Math.PI / 2); ig.translate(0, y + BEVEL * 0.2, 0);
-  const im = new THREE.Mesh(ig, mats.icing); im.castShadow = im.receiveShadow = true; g.add(im);
   return g;
 }
 
-// piped cream rosette: a ridged, twisted dollop
 function rosetteGeometry() {
   const prof = [[0, 0], [0.125, 0], [0.13, 0.03], [0.115, 0.07], [0.085, 0.12], [0.05, 0.17], [0.018, 0.215], [0, 0.23]]
     .map(([r, y]) => new THREE.Vector2(r, y));
@@ -179,56 +176,44 @@ function rosetteGeometry() {
 }
 const ROSETTE = rosetteGeometry();
 const SPRINKLE = new THREE.CapsuleGeometry(0.018, 0.05, 3, 8);
-const SPRINKLE_COLS = ["#ff4d6d", "#00AEEF", "#04378F", "#2ec27e", "#ffb000", "#ffffff", "#a06cff"].map(c => new THREE.Color(c));
+const SPRINKLE_COLS = ["#ff4d6d", "#00AEEF", "#04378F", "#2ec27e", "#ffb000", "#a06cff", "#ff8a3d"].map(c => new THREE.Color(c));
 
-// ---------------------------------------------------------------- build the cake
-const rig = new THREE.Group();     // whole cake (slides in / out)
-const cake = new THREE.Group();    // fixed orientation
-rig.add(cake);
-scene.add(rig);
+// ---------------------------------------------------------------- build
 const CAKE_YAW = 0.42;
+const cake = new THREE.Group();
 cake.rotation.y = CAKE_YAW;
+scene.add(cake);
 
-let rnd = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
-const pieceGroups = [];
-let sliceGroup, candle, flame;
+const rnd = (() => { let s = 12345; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
 
-LOGO.forEach((bar, bi) => {
-  const cuts = CUTS[bi];
-  const bounds = [null, ...cuts, null];
-  const pieces = [];
-  for (let k = 0; k < bounds.length - 1; k++) {
-    const poly = piecePoly(bi, bounds[k], bounds[k + 1]);
-    const R = 0.13, r0 = 0.012;
-    const radii = [bounds[k] == null ? R : r0, bounds[k + 1] == null ? R : r0, bounds[k + 1] == null ? R : r0, bounds[k] == null ? R : r0];
-    const grp = new THREE.Group();
-    grp.add(makePiece(poly, radii));
-    cake.add(grp);
-    pieces.push({ grp, a: bounds[k] ?? -1e9, b: bounds[k + 1] ?? 1e9 });
-    if (bi === SLICE.bar && k === SLICE.piece) sliceGroup = grp;
-  }
-  pieceGroups.push(pieces);
-  const which = (px, py) => pieces.find(p => { const e = edgeX(bi, px, py); return e >= p.a && e < p.b; }) || pieces[0];
+// final pieces: each has a group (moves) with rosettes + sprinkles + its own body (shown once cut)
+const P = {};
+for (const k of ORDER) {
+  const grp = new THREE.Group(); cake.add(grp);
+  const body = makeBody(...BAND[k]); grp.add(body);
+  P[k] = { grp, body };
+}
+// bodies used before the cuts: the whole slab, then everything below strip A
+const WHOLE = makeBody(0, 504); cake.add(WHOLE);
+const LOWER = makeBody(190, 504); cake.add(LOWER);
 
-  // rosettes around the outer edge (not along cuts)
-  const full = roundedShape(bar, [0.13, 0.13, 0.13, 0.13]);
-  const per = full.getLength(), n = Math.round(per / 0.19);
-  const pts = full.getSpacedPoints(n);
-  const [cx, cz] = toW([bar.reduce((s, p) => s + p[0], 0) / 4, bar.reduce((s, p) => s + p[1], 0) / 4]);
-  const byPiece = new Map();
+const bandOf = y => ORDER.find(k => y >= BAND[k][0] - 1e-6 && y < BAND[k][1]) || "bar3";
+
+// rosettes along the slab's outline, each owned by the piece its row belongs to
+{
+  const outline = roundedShape(quad(0, 504), [R, R, R, R]);
+  const n = Math.round(outline.getLength() / 0.19);
+  const pts = outline.getSpacedPoints(n);
+  const by = {};
   for (let i = 0; i < n; i++) {
     const a = pts[i], b = pts[(i + 1) % n];
-    let nx = b.y - a.y, nz = -(b.x - a.x);   // in world (x, z=-shapeY)
-    const tx = b.x - a.x, tz = -(b.y - a.y);
+    const wx = a.x, wz = -a.y, tx = b.x - a.x, tz = -(b.y - a.y);
     let ox = tz, oz = -tx; const L = Math.hypot(ox, oz) || 1; ox /= L; oz /= L;
-    const wx = a.x, wz = -a.y;
-    if ((wx - cx) * ox + (wz - cz) * oz < 0) { ox = -ox; oz = -oz; }
-    const px = wx / S + CX, py = wz / S + CY;
-    const pc = which(px, py);
-    if (!byPiece.has(pc)) byPiece.set(pc, []);
-    byPiece.get(pc).push([wx + ox * 0.07, wz + oz * 0.07, rnd()]);
+    if (wx * ox + wz * oz < 0) { ox = -ox; oz = -oz; }
+    const k = bandOf(wz / S + CY);
+    (by[k] ||= []).push([wx + ox * 0.07, wz + oz * 0.07, rnd()]);
   }
-  for (const [pc, list] of byPiece) {
+  for (const [k, list] of Object.entries(by)) {
     const inst = new THREE.InstancedMesh(ROSETTE, mats.rosette, list.length);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion();
     list.forEach(([x, z, r], i) => {
@@ -238,36 +223,33 @@ LOGO.forEach((bar, bi) => {
       inst.setMatrixAt(i, m);
     });
     inst.castShadow = inst.receiveShadow = true;
-    pc.grp.add(inst);
+    P[k].grp.add(inst);
   }
+}
 
-  // sprinkles on top
-  const [[x0, y0], , , [x3, y3]] = bar;
-  const sp = new Map();
-  const count = bi === 2 ? 70 : 45;
+// sprinkles, kept clear of the cut lines
+for (const k of ORDER) {
+  const [y0, y1] = BAND[k];
+  const count = Math.round((y1 - y0) / 126 * 55);
+  const list = [];
   for (let i = 0; i < count; i++) {
-    let px, py;
-    if (bi === 2 && i < 40) { px = 60 + rnd() * 300; } else { px = x0 + 30 + rnd() * (bar[1][0] - x0 - 60); }
-    py = y0 + 18 + rnd() * (y3 - y0 - 36);
-    px -= (py - y0) * SLANT;
-    const pc = which(px, py);
-    if (!sp.has(pc)) sp.set(pc, []);
-    sp.get(pc).push([...toW([px, py]), rnd(), rnd(), Math.floor(rnd() * SPRINKLE_COLS.length)]);
+    const py = y0 + 14 + rnd() * (y1 - y0 - 28);
+    const px = XL(py) + 25 + rnd() * (XR(py) - XL(py) - 50);
+    list.push([...toW([px, py]), rnd(), Math.floor(rnd() * SPRINKLE_COLS.length)]);
   }
-  for (const [pc, list] of sp) {
-    const inst = new THREE.InstancedMesh(SPRINKLE, new THREE.MeshStandardMaterial({ roughness: 0.35 }), list.length);
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-    list.forEach(([x, z, r1, r2, ci], i) => {
-      e.set(Math.PI / 2, 0, r1 * 6.28); q.setFromEuler(e);
-      m.compose(new THREE.Vector3(x, TOP_Y + 0.012, z), q, new THREE.Vector3(1, 1, 1));
-      inst.setMatrixAt(i, m); inst.setColorAt(i, SPRINKLE_COLS[ci]);
-    });
-    inst.castShadow = true;
-    pc.grp.add(inst);
-  }
-});
+  const inst = new THREE.InstancedMesh(SPRINKLE, new THREE.MeshStandardMaterial({ roughness: 0.35 }), list.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  list.forEach(([x, z, r1, ci], i) => {
+    e.set(Math.PI / 2, 0, r1 * 6.28); q.setFromEuler(e);
+    m.compose(new THREE.Vector3(x, TOP_Y + 0.012, z), q, new THREE.Vector3(1, 1, 1));
+    inst.setMatrixAt(i, m); inst.setColorAt(i, SPRINKLE_COLS[ci]);
+  });
+  inst.castShadow = true;
+  P[k].grp.add(inst);
+}
 
 // candle: blue / white spiral, on the left end of the bottom bar
+let flame;
 {
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 512;
   const g = cv.getContext("2d");
@@ -279,7 +261,7 @@ LOGO.forEach((bar, bi) => {
   }
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
   const CH = 0.62, CR = 0.062;
-  candle = new THREE.Group();
+  const candle = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CylinderGeometry(CR, CR, CH, 40), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38 }));
   body.position.y = CH / 2; body.castShadow = true; candle.add(body);
   const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 8), new THREE.MeshStandardMaterial({ color: "#3a2a1a" }));
@@ -291,77 +273,167 @@ LOGO.forEach((bar, bi) => {
   core.position.y = -0.02; flame.add(core);
   const [x, z] = toW([128, 441]);
   candle.position.set(x, TOP_Y - 0.01, z);
-  pieceGroups[2][0].grp.add(candle);
+  P.bar3.grp.add(candle);
 }
+
+// knife: steel blade (origin at the tip, on the cutting edge), handle at +x
+const BLADE_L = 3.0, BLADE_H = 0.72, KS = 1.2;   // KS: knife scale
+const knife = new THREE.Group();
+{
+  const s = new THREE.Shape();
+  s.moveTo(0, BLADE_H * 0.62);                              // tip, near the spine
+  s.quadraticCurveTo(0.45, 0.02, 1.3, 0);                  // curved belly
+  s.lineTo(BLADE_L, 0);
+  s.lineTo(BLADE_L, BLADE_H);
+  s.quadraticCurveTo(1.2, BLADE_H * 0.98, 0, BLADE_H * 0.62);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: 0.022, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2, curveSegments: 16 });
+  geo.translate(0, 0, -0.011);
+  const blade = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#ffffff", metalness: 0.55, roughness: 0.25 }));
+  blade.castShadow = true; knife.add(blade);
+  const steel = new THREE.MeshStandardMaterial({ color: "#c9d2dc", metalness: 1, roughness: 0.25 });
+  const bolster = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.34, 0.09), steel);
+  bolster.position.set(BLADE_L + 0.06, BLADE_H - 0.17, 0); bolster.castShadow = true; knife.add(bolster);
+  const hg = new THREE.CapsuleGeometry(0.13, 1.15, 6, 24); hg.rotateZ(Math.PI / 2); hg.scale(1, 1.15, 0.8);
+  const handle = new THREE.Mesh(hg, new THREE.MeshStandardMaterial({ color: "#14223a", roughness: 0.35 }));
+  handle.position.set(BLADE_L + 0.12 + 0.71, BLADE_H - 0.2, 0); handle.castShadow = true; knife.add(handle);
+  for (const dx of [0.35, 0.75, 1.1]) {
+    const rv = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.24, 16), steel);
+    rv.rotation.x = Math.PI / 2; rv.position.set(BLADE_L + 0.12 + dx, BLADE_H - 0.2, 0); knife.add(rv);
+  }
+}
+knife.scale.setScalar(KS);
+cake.add(knife);
+
+// cut lines drawn on the icing behind the knife
+const cutMat = new THREE.MeshBasicMaterial({ color: C.cut });
+const CUTS = [126, 190, 316, 378].map(y => {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.004, 0.016), cutMat);
+  m.position.set(0, TOP_Y + 0.002, toW([0, y])[1]);
+  m.visible = false; cake.add(m);
+  return { y, m };
+});
 
 // ---------------------------------------------------------------- timeline
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const clamp01 = x => Math.min(1, Math.max(0, x));
 const ease = {
   inOut: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  sine: t => 0.5 - Math.cos(Math.PI * t) / 2,
   out: t => 1 - Math.pow(1 - t, 3),
-  outQuint: t => 1 - Math.pow(1 - t, 5),
   in: t => t * t * t,
-  inQuart: t => t * t * t * t,
 };
 const seg = (t, a, b, e = ease.inOut) => e(clamp01((t - a) / (b - a)));
-const lerpV = (a, b, k) => a.clone().lerp(b, k);
+const lerp = (a, b, k) => a + (b - a) * k;
 
-// camera shots (cake space)
-// WIDE is in world space (the cake sits turned on the table); the close-ups are in cake space.
-const WIDE = { pos: V(0.1, 15.0, 21.0), tgt: V(0.0, 0, -1.3), fov: 34 };
-const CLOSE_A = { pos: V(-2.1, 3.2, 6.0), tgt: V(-2.75, 0.7, 1.9), fov: 36 };   // candle end
-const CLOSE_B = { pos: V(-0.9, 3.1, 6.2), tgt: V(-1.6, 0.6, 2.0), fov: 37 };    // drifted along the bar, onto the slice
-const ROT = new THREE.Matrix4().makeRotationY(CAKE_YAW);
-for (const sh of [CLOSE_A, CLOSE_B]) { sh.pos.applyMatrix4(ROT); sh.tgt.applyMatrix4(ROT); }
+// world x of the line ends, in cake space (cut lines run straight along x)
+const lineX = y => [toW([XL(y), y])[0], toW([XR(y), y])[0]];
+const lineZ = y => toW([0, y])[1];
+const UP = TOP_Y + 0.35, DOWN = 0.3, OVER = 0.25;   // knife edge heights; overshoot past the ends
+
+// knife keyframes: [time, tip x, edge y, z]. Cuts 1 and 3 push right→left; 2 and 4 pull left→right.
+const KF = [];
+{
+  const [l1, r1] = lineX(126), [l2, r2] = lineX(190), [l3, r3] = lineX(316), [l4, r4] = lineX(378);
+  const z1 = lineZ(126), z2 = lineZ(190), z3 = lineZ(316), z4 = lineZ(378);
+  KF.push(
+    [0.00, r1 + 4.5, UP + 4.0, z1 - 3.0],      // off frame, up right
+    [0.70, r1 - 0.2, UP, z1],
+    [0.84, r1 - 0.2, DOWN, z1],                // in
+    [1.36, l1 - BLADE_L * KS - OVER, DOWN, z1],     // push through to the far end
+    [1.46, l1 - BLADE_L * KS - OVER, UP, z1],
+    [1.60, l2 - BLADE_L * KS + 0.2, UP, z2],
+    [1.72, l2 - BLADE_L * KS + 0.2, DOWN, z2],
+    [2.24, r2 + OVER, DOWN, z2],               // pull
+    [2.34, r2 + OVER, UP, z2],
+    [2.70, r3 - 0.2, UP, z3],
+    [2.84, r3 - 0.2, DOWN, z3],
+    [3.36, l3 - BLADE_L * KS - OVER, DOWN, z3],
+    [3.46, l3 - BLADE_L * KS - OVER, UP, z3],
+    [3.60, l4 - BLADE_L * KS + 0.2, UP, z4],
+    [3.72, l4 - BLADE_L * KS + 0.2, DOWN, z4],
+    [4.24, r4 + OVER, DOWN, z4],
+    [4.34, r4 + OVER, UP, z4],
+    [5.00, r4 + 5.0, UP + 4.0, z4 + 1.0],      // away
+  );
+}
+const T_CUT = [[0.84, 1.36, -1], [1.72, 2.24, +1], [2.84, 3.36, -1], [3.72, 4.24, +1]];   // [start, end, direction]
+const T_SPLIT_A = 2.34, T_SPLIT_B = 4.34;
+
+function knifeAt(t) {
+  let i = 0; while (i < KF.length - 2 && t > KF[i + 1][0]) i++;
+  const [ta, xa, ya, za] = KF[i], [tb, xb, yb, zb] = KF[i + 1];
+  const cutting = ya === DOWN && yb === DOWN;
+  const k = (cutting ? ease.sine : ease.inOut)(clamp01((t - ta) / (tb - ta)));
+  return { x: lerp(xa, xb, k), y: lerp(ya, yb, k), z: lerp(za, zb, k), cutting };
+}
+
+// how far each cut has run, as [x0, x1] in cake space
+function cutExtent(i, t) {
+  const [a, b, dir] = T_CUT[i];
+  if (t < a) return null;
+  const [l, r] = lineX(CUTS[i].y);
+  const kx = knifeAt(Math.min(t, b)).x;
+  if (dir < 0) return [Math.max(l, kx), r];                         // tip has reached kx
+  return [l, Math.min(r, kx + BLADE_L * KS)];                           // heel has reached kx + L
+}
+
+// camera shots: CUT is low and three-quarter while the knife works; WIDE reads as the logo
+const WIDE = { pos: V(-0.2, 21.5, 10.5), tgt: V(-0.2, 0, -1.2), fov: 34 };
+const CUT_A = { pos: V(1.6, 11.5, 21.5), tgt: V(-0.7, 0.3, -1.0), fov: 34 };
+const CUT_B = { pos: V(0.4, 12.5, 21.0), tgt: V(-0.8, 0.3, -1.0), fov: 34 };
 
 function shotAt(t) {
-  let s;
-  if (t < 1.95) s = WIDE;
-  else if (t < 4.3) {
-    const k = seg(t, 1.95, 4.3, x => x); // linear drift, like a slow dolly
-    s = { pos: lerpV(CLOSE_A.pos, CLOSE_B.pos, k), tgt: lerpV(CLOSE_A.tgt, CLOSE_B.tgt, k), fov: CLOSE_A.fov + (CLOSE_B.fov - CLOSE_A.fov) * k };
-  } else {
-    const k = seg(t, 4.3, 5.25, ease.inOut);
-    // pull back on an arc: rise first, then settle
-    const pos = lerpV(CLOSE_B.pos, WIDE.pos, k);
-    pos.y += Math.sin(k * Math.PI) * 0.8;
-    s = { pos, tgt: lerpV(CLOSE_B.tgt, WIDE.tgt, k), fov: CLOSE_B.fov + (WIDE.fov - CLOSE_B.fov) * k };
+  if (t < 4.4) {
+    const k = seg(t, 0, 4.4, ease.sine);
+    return { pos: CUT_A.pos.clone().lerp(CUT_B.pos, k), tgt: CUT_A.tgt.clone().lerp(CUT_B.tgt, k), fov: lerp(CUT_A.fov, CUT_B.fov, k) };
   }
-  // a whisper of handheld-free drift on the wide
-  const drift = Math.sin(t * 1.1) * 0.08;
-  return { pos: s.pos.clone().add(V(drift, 0, 0)), tgt: s.tgt, fov: s.fov };
+  const k = seg(t, 4.4, 5.7, ease.inOut);
+  const pos = CUT_B.pos.clone().lerp(WIDE.pos, k);
+  pos.x += Math.sin(Math.max(0, t - 5.7) * 0.9) * 0.25;
+  return { pos, tgt: CUT_B.tgt.clone().lerp(WIDE.tgt, k), fov: lerp(CUT_B.fov, WIDE.fov, k) };
 }
 
-function rigAt(t) {
-  // out: slides left, accelerating (1.0–1.6 s)
-  const out = seg(t, 1.0, 1.6, ease.inQuart);
-  // in: arrives from top-right, decelerating (1.95–2.7 s)
-  const inn = 1 - seg(t, 1.95, 2.75, ease.outQuint);
-  const p = V(-16 * out, 0, -2.0 * out);
-  if (t >= 1.95) p.set(7.5 * inn, 0, -6.5 * inn);
-  const yaw = t >= 1.95 ? -0.35 * inn : 0.12 * out;
-  return { p, yaw };
-}
-
-function sliceAt(t) {
-  const o = seg(t, 3.1, 3.8, ease.out) - seg(t, 4.45, 5.0, ease.inOut);
-  return { z: 0.62 * o, x: 0.12 * o, y: 0 };
+// a cut strip lifts, then slides out along its length
+function stripAt(t, t0, dir) {
+  const up = seg(t, t0 + 0.04, t0 + 0.26, ease.out);
+  const slide = seg(t, t0 + 0.2, t0 + 0.95, ease.in);
+  return V(dir * 14 * slide, 0.32 * up, 0);
 }
 
 const logoPath = (() => {
   const p = new Path2D();
-  for (const bar of LOGO) { p.moveTo(...bar[0]); for (const q of bar.slice(1)) p.lineTo(...q); p.closePath(); }
+  for (const k of ["bar1", "bar2", "bar3"]) { const q = quad(...BAND[k]); p.moveTo(...q[0]); for (const v of q.slice(1)) p.lineTo(...v); p.closePath(); }
   return p;
 })();
 
 function setScene(t) {
-  const r = rigAt(t);
-  rig.position.copy(r.p); rig.rotation.y = r.yaw;
-  const sl = sliceAt(t);
-  sliceGroup.position.set(sl.x, sl.y, sl.z);
+  // which bodies exist
+  const afterA = t >= T_SPLIT_A, afterB = t >= T_SPLIT_B;
+  WHOLE.visible = !afterA;
+  P.bar1.body.visible = P.stripA.body.visible = afterA;
+  LOWER.visible = afterA && !afterB;
+  P.bar2.body.visible = P.stripB.body.visible = P.bar3.body.visible = afterB;
+
+  // knife + cut lines
+  const kn = knifeAt(t);
+  knife.position.set(kn.x, kn.y, kn.z);
+  knife.rotation.z = kn.cutting ? 0 : 0.04 * Math.sin(t * 3);
+  CUTS.forEach((c, i) => {
+    const e = cutExtent(i, t);
+    const gone = i < 2 ? t > T_SPLIT_A + 0.06 : t > T_SPLIT_B + 0.06;
+    c.m.visible = !!e && e[1] - e[0] > 0.01 && !gone;
+    if (c.m.visible) { c.m.scale.x = e[1] - e[0]; c.m.position.x = (e[0] + e[1]) / 2; }
+  });
+
+  // strips slide out: A to the right (the way the knife left), B to the left
+  P.stripA.grp.position.copy(stripAt(t, T_SPLIT_A, +1));
+  P.stripB.grp.position.copy(stripAt(t, T_SPLIT_B, -1));
+  P.stripA.grp.visible = t < T_SPLIT_A + 1.2;
+  P.stripB.grp.visible = t < T_SPLIT_B + 1.2;
+
   flame.scale.set(1 + Math.sin(t * 31) * 0.06, 1 + Math.sin(t * 23 + 1) * 0.1, 1);
   flame.rotation.z = Math.sin(t * 17) * 0.08;
+
   const s = shotAt(t);
   camera.position.copy(s.pos); camera.fov = s.fov; camera.updateProjectionMatrix();
   camera.lookAt(s.tgt);
@@ -372,7 +444,6 @@ const out = document.getElementById("c");
 const ctx = out.getContext("2d");
 function renderFrame(f, sub = 1) {
   const shutter = 0.5; // 180°
-  ctx.globalCompositeOperation = "source-over";
   for (let s = 0; s < sub; s++) {
     const tf = sub === 1 ? f : f + ((s + 0.5) / sub - 0.5) * shutter;
     setScene(Math.max(0, tf) / FPS);
@@ -380,15 +451,19 @@ function renderFrame(f, sub = 1) {
     ctx.globalAlpha = 1 / (s + 1);
     ctx.drawImage(renderer.domElement, 0, 0);
   }
+  // flat logo fades in once the cake has become the logo
+  const t = f / FPS, a = seg(t, 5.5, 6.1, ease.out);
+  if (a > 0) {
+    const lw = 200, sc = lw / 820;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(W / 2 - lw / 2, 205 + (1 - a) * 18);
+    ctx.scale(sc, sc);
+    ctx.fillStyle = C.logo;
+    ctx.fill(logoPath);
+    ctx.restore();
+  }
   ctx.globalAlpha = 1;
-  // flat logo, top centre
-  const lw = 200, sc = lw / 820;
-  ctx.save();
-  ctx.translate(W / 2 - lw / 2, 205);
-  ctx.scale(sc, sc);
-  ctx.fillStyle = C.logo;
-  ctx.fill(logoPath);
-  ctx.restore();
 }
 
 window.FILM = { FRAMES, FPS, renderFrame };
