@@ -25,7 +25,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 // One whole cake → a knife makes four cuts → the two cut strips slide out → the three VTB bars remain.
 
 // ---------------------------------------------------------------- setup
-const W = 1080, H = 1920, FPS = 30, DUR = 7.5, FRAMES = Math.round(DUR * FPS);
+const W = 1080, H = 1920, FPS = 30, DUR = 9.0, FRAMES = Math.round(DUR * FPS);
 const params = new URLSearchParams(location.search);
 const RENDER = params.has("render");
 if (RENDER) document.body.classList.add("render");
@@ -33,7 +33,6 @@ if (RENDER) document.body.classList.add("render");
 const C = {
   bgTop: "#0755C2", bgBottom: "#67C6FF",   // the supplied background gradient
   shadow: "#00225e",
-  logo: "#FFFFFF",
   icing: "#FFFFFF",
   navy: "#04378F",
   blue: "#00AEEF",
@@ -248,33 +247,45 @@ for (const k of ORDER) {
   P[k].grp.add(inst);
 }
 
-// candle: blue / white spiral, on the left end of the bottom bar
-let flame;
-{
+// candles: spiral-striped, on the three bars (clear of the cut lines)
+const flames = [];
+function stripeTexture(col) {
   const cv = document.createElement("canvas"); cv.width = 256; cv.height = 512;
   const g = cv.getContext("2d");
   g.fillStyle = "#ffffff"; g.fillRect(0, 0, 256, 512);
-  g.fillStyle = "#1f7fe0";
+  g.fillStyle = col;
   for (let k = -4; k < 8; k++) {
     g.beginPath();
     g.moveTo(0, k * 96); g.lineTo(256, k * 96 - 160); g.lineTo(256, k * 96 - 110); g.lineTo(0, k * 96 + 50); g.fill();
   }
   const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-  const CH = 0.62, CR = 0.062;
+  return tex;
+}
+const wickMat = new THREE.MeshStandardMaterial({ color: "#3a2a1a" });
+const flameMat = new THREE.MeshBasicMaterial({ color: "#ffb21f" }), coreMat = new THREE.MeshBasicMaterial({ color: "#fff6c8" });
+function addCandle(piece, px, py, col, CH, phase) {
+  const CR = 0.062;
   const candle = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(CR, CR, CH, 40), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.38 }));
-  body.position.y = CH / 2; body.castShadow = true; candle.add(body);
-  const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 8), new THREE.MeshStandardMaterial({ color: "#3a2a1a" }));
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(CR, CR, CH, 40), new THREE.MeshStandardMaterial({ map: stripeTexture(col), roughness: 0.38 }));
+  body.position.y = CH / 2; body.rotation.y = phase * 6.28; body.castShadow = true; candle.add(body);
+  const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 8), wickMat);
   wick.position.y = CH + 0.035; candle.add(wick);
   const fg = new THREE.SphereGeometry(0.045, 24, 16); fg.scale(1, 2.1, 1);
-  flame = new THREE.Mesh(fg, new THREE.MeshBasicMaterial({ color: "#ffb21f" }));
+  const flame = new THREE.Mesh(fg, flameMat);
   flame.position.y = CH + 0.12; candle.add(flame);
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 12).scale(1, 2, 1), new THREE.MeshBasicMaterial({ color: "#fff6c8" }));
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 12).scale(1, 2, 1), coreMat);
   core.position.y = -0.02; flame.add(core);
-  const [x, z] = toW([128, 441]);
+  const [x, z] = toW([px, py]);
   candle.position.set(x, TOP_Y - 0.01, z);
-  P.bar3.grp.add(candle);
+  P[piece].grp.add(candle);
+  flames.push({ flame, phase: phase * 10 });
 }
+// [piece, logo x, logo y, stripe colour, height]
+for (const [k, px, py, col, h] of [
+  ["bar1", 330, 63, "#1f7fe0", 0.6], ["bar1", 520, 60, "#04378F", 0.68], ["bar1", 700, 66, "#00AEEF", 0.56],
+  ["bar2", 200, 253, "#00AEEF", 0.64], ["bar2", 420, 250, "#1f7fe0", 0.58], ["bar2", 630, 256, "#04378F", 0.66],
+  ["bar3", 128, 441, "#1f7fe0", 0.62], ["bar3", 330, 444, "#04378F", 0.57], ["bar3", 540, 438, "#00AEEF", 0.65],
+]) addCandle(k, px, py, col, h, rnd());
 
 // knife: steel blade (origin at the tip, on the cutting edge), handle at +x
 const BLADE_L = 3.0, BLADE_H = 0.72, KS = 1.2;   // KS: knife scale
@@ -331,33 +342,32 @@ const lineZ = y => toW([0, y])[1];
 const UP = TOP_Y + 0.35, DOWN = 0.3, OVER = 0.25;   // knife edge heights; overshoot past the ends
 
 // knife keyframes: [time, tip x, edge y, z]. Cuts 1 and 3 push right→left; 2 and 4 pull left→right.
-const KF = [];
+const KF = [], T_CUT = [];
+const LOWER_T = 0.15, CUT_T = 0.8, LIFT_T = 0.12, HOP_T = 0.18;
+let T_SPLIT_A, T_SPLIT_B, T_KNIFE_OUT;
 {
-  const [l1, r1] = lineX(126), [l2, r2] = lineX(190), [l3, r3] = lineX(316), [l4, r4] = lineX(378);
-  const z1 = lineZ(126), z2 = lineZ(190), z3 = lineZ(316), z4 = lineZ(378);
-  KF.push(
-    [0.00, r1 + 4.5, UP + 4.0, z1 - 3.0],      // off frame, up right
-    [0.70, r1 - 0.2, UP, z1],
-    [0.84, r1 - 0.2, DOWN, z1],                // in
-    [1.36, l1 - BLADE_L * KS - OVER, DOWN, z1],     // push through to the far end
-    [1.46, l1 - BLADE_L * KS - OVER, UP, z1],
-    [1.60, l2 - BLADE_L * KS + 0.2, UP, z2],
-    [1.72, l2 - BLADE_L * KS + 0.2, DOWN, z2],
-    [2.24, r2 + OVER, DOWN, z2],               // pull
-    [2.34, r2 + OVER, UP, z2],
-    [2.70, r3 - 0.2, UP, z3],
-    [2.84, r3 - 0.2, DOWN, z3],
-    [3.36, l3 - BLADE_L * KS - OVER, DOWN, z3],
-    [3.46, l3 - BLADE_L * KS - OVER, UP, z3],
-    [3.60, l4 - BLADE_L * KS + 0.2, UP, z4],
-    [3.72, l4 - BLADE_L * KS + 0.2, DOWN, z4],
-    [4.24, r4 + OVER, DOWN, z4],
-    [4.34, r4 + OVER, UP, z4],
-    [5.00, r4 + 5.0, UP + 4.0, z4 + 1.0],      // away
-  );
+  const L = BLADE_L * KS;
+  let t = 0;
+  const [, r1] = lineX(126);
+  KF.push([0, r1 + 3.5, UP + 2.5, lineZ(126) - 1.5]);   // off frame, up right
+  t = 0.7;
+  const cut = (y, dir) => {   // knife arrives UP above the start of this line, then cuts it
+    const [l, r] = lineX(y), z = lineZ(y);
+    const x0 = dir < 0 ? r - 0.2 : l - L + 0.2, x1 = dir < 0 ? l - L - OVER : r + OVER;
+    KF.push([t, x0, UP, z]); t += LOWER_T;
+    KF.push([t, x0, DOWN, z]); T_CUT.push([t, t + CUT_T, dir]); t += CUT_T;
+    KF.push([t, x1, DOWN, z]); t += LIFT_T;
+    KF.push([t, x1, UP, z]);
+  };
+  cut(126, -1); t += HOP_T;
+  cut(190, +1); T_SPLIT_A = t;
+  t += 0.75;                    // the strip slides out while the knife crosses over
+  cut(316, -1); t += HOP_T;
+  cut(378, +1); T_SPLIT_B = t;
+  T_KNIFE_OUT = t + 0.7;
+  const last = KF[KF.length - 1];
+  KF.push([T_KNIFE_OUT, last[1] + 4.0, UP + 3.0, last[3] + 0.5]);   // away
 }
-const T_CUT = [[0.84, 1.36, -1], [1.72, 2.24, +1], [2.84, 3.36, -1], [3.72, 4.24, +1]];   // [start, end, direction]
-const T_SPLIT_A = 2.34, T_SPLIT_B = 4.34;
 
 function knifeAt(t) {
   let i = 0; while (i < KF.length - 2 && t > KF[i + 1][0]) i++;
@@ -377,20 +387,30 @@ function cutExtent(i, t) {
   return [l, Math.min(r, kx + BLADE_L * KS)];                           // heel has reached kx + L
 }
 
-// camera shots: CUT is low and three-quarter while the knife works; WIDE reads as the logo
+// camera: close on the knife while it cuts (following a smoothed point on the blade), then out to the whole logo
 const WIDE = { pos: V(-0.2, 21.5, 10.5), tgt: V(-0.2, 0, -1.2), fov: 34 };
-const CUT_A = { pos: V(1.6, 11.5, 21.5), tgt: V(-0.7, 0.3, -1.0), fov: 34 };
-const CUT_B = { pos: V(0.4, 12.5, 21.0), tgt: V(-0.8, 0.3, -1.0), fov: 34 };
-
-function shotAt(t) {
-  if (t < 4.4) {
-    const k = seg(t, 0, 4.4, ease.sine);
-    return { pos: CUT_A.pos.clone().lerp(CUT_B.pos, k), tgt: CUT_A.tgt.clone().lerp(CUT_B.tgt, k), fov: lerp(CUT_A.fov, CUT_B.fov, k) };
+const CLOSE_OFF = V(1.6, 4.6, 7.4), CLOSE_FOV = 36;
+const ROT = new THREE.Matrix4().makeRotationY(CAKE_YAW);
+function focusAt(t) {             // blade centre, averaged over the last ~0.6 s so the camera trails smoothly
+  let x = 0, z = 0, w = 0;
+  for (let k = 0; k < 16; k++) {
+    const tt = Math.max(0, t - k * 0.04), wk = 1 - k / 16;
+    const kn = knifeAt(tt);
+    x += (kn.x + BLADE_L * KS * 0.45) * wk; z += kn.z * wk; w += wk;
   }
-  const k = seg(t, 4.4, 5.7, ease.inOut);
-  const pos = CUT_B.pos.clone().lerp(WIDE.pos, k);
-  pos.x += Math.sin(Math.max(0, t - 5.7) * 0.9) * 0.25;
-  return { pos, tgt: CUT_B.tgt.clone().lerp(WIDE.tgt, k), fov: lerp(CUT_B.fov, WIDE.fov, k) };
+  return V(Math.min(3.6, Math.max(-3.6, x / w)), TOP_Y * 0.7, z / w);
+}
+const T_OUT0 = () => T_SPLIT_B + 0.2, T_OUT1 = () => T_SPLIT_B + 2.0;
+function shotAt(t) {
+  const f = focusAt(Math.min(t, T_OUT0()));
+  const close = { pos: f.clone().add(CLOSE_OFF).applyMatrix4(ROT), tgt: f.clone().applyMatrix4(ROT), fov: CLOSE_FOV };
+  const k = seg(t, T_OUT0(), T_OUT1(), ease.inOut);
+  if (k <= 0) return close;
+  // pull out on a rising arc
+  const pos = close.pos.clone().lerp(WIDE.pos, k);
+  pos.y += Math.sin(k * Math.PI) * 2.0;
+  pos.x += Math.sin(Math.max(0, t - T_OUT1()) * 0.9) * 0.25;
+  return { pos, tgt: close.tgt.clone().lerp(WIDE.tgt, ease.out(k)), fov: lerp(CLOSE_FOV, WIDE.fov, k) };
 }
 
 // a cut strip lifts, then slides out along its length
@@ -399,12 +419,6 @@ function stripAt(t, t0, dir) {
   const slide = seg(t, t0 + 0.2, t0 + 0.95, ease.in);
   return V(dir * 14 * slide, 0.32 * up, 0);
 }
-
-const logoPath = (() => {
-  const p = new Path2D();
-  for (const k of ["bar1", "bar2", "bar3"]) { const q = quad(...BAND[k]); p.moveTo(...q[0]); for (const v of q.slice(1)) p.lineTo(...v); p.closePath(); }
-  return p;
-})();
 
 function setScene(t) {
   // which bodies exist
@@ -431,8 +445,10 @@ function setScene(t) {
   P.stripA.grp.visible = t < T_SPLIT_A + 1.2;
   P.stripB.grp.visible = t < T_SPLIT_B + 1.2;
 
-  flame.scale.set(1 + Math.sin(t * 31) * 0.06, 1 + Math.sin(t * 23 + 1) * 0.1, 1);
-  flame.rotation.z = Math.sin(t * 17) * 0.08;
+  for (const { flame, phase } of flames) {
+    flame.scale.set(1 + Math.sin(t * 31 + phase) * 0.06, 1 + Math.sin(t * 23 + 1 + phase) * 0.1, 1);
+    flame.rotation.z = Math.sin(t * 17 + phase) * 0.08;
+  }
 
   const s = shotAt(t);
   camera.position.copy(s.pos); camera.fov = s.fov; camera.updateProjectionMatrix();
@@ -450,18 +466,6 @@ function renderFrame(f, sub = 1) {
     renderer.render(scene, camera);
     ctx.globalAlpha = 1 / (s + 1);
     ctx.drawImage(renderer.domElement, 0, 0);
-  }
-  // flat logo fades in once the cake has become the logo
-  const t = f / FPS, a = seg(t, 5.5, 6.1, ease.out);
-  if (a > 0) {
-    const lw = 200, sc = lw / 820;
-    ctx.save();
-    ctx.globalAlpha = a;
-    ctx.translate(W / 2 - lw / 2, 205 + (1 - a) * 18);
-    ctx.scale(sc, sc);
-    ctx.fillStyle = C.logo;
-    ctx.fill(logoPath);
-    ctx.restore();
   }
   ctx.globalAlpha = 1;
 }
