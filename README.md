@@ -62,7 +62,7 @@ The camera stays in a tight close-up on the knife while it cuts (crops freely, l
 - **Post:** a bloom pass makes the flames glow, and a depth-of-field pass keeps the knife's focus point sharp. Fore- and background blur strongly in the close-ups and only lightly in the end shot (`LOOK` sets the blur strength, maximum blur radius and bloom).
 - **Speed:** each held pose renders once and is reused for its 2–3 frames, so a full render takes about 25 minutes.
 
-**Film look:** an animated grain (new pattern every frame, so it boils through the held poses) and a soft navy vignette sit over every frame. `GRAIN.amount` in `cake/cake.html` sets the strength (0 turns it off) and `GRAIN.size` the grain size in pixels. The MP4 is encoded with `-tune grain` so the encoder keeps it.
+**Film look:** a soft navy vignette sits over every frame. Grain is off; set `GRAIN.amount` in `cake/cake.html` to about 0.3 to bring back an animated film grain (`GRAIN.size` sets the grain size in pixels).
 
 **Stepped timing:** like the reference, motion is choppy on purpose. Poses update 12 times a second and are held for 2–3 frames of the 30 fps video, with no motion blur. `STEP` in `cake/cake.html` sets the rate; `?step=0` in the preview URL (or `STEP = 0`) gives smooth motion again.
 

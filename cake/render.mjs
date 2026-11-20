@@ -52,7 +52,7 @@ if (arg("--frames")) {
   fs.mkdirSync(OUT, { recursive: true });
   const mp4 = path.join(OUT, "vtb-cake-logo-1080x1920-30fps.mp4");
   execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"),
-    "-c:v", "libx264", "-preset", "slow", "-tune", "grain", "-crf", "17", "-maxrate", "30M", "-bufsize", "60M", "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart", mp4], { stdio: "inherit" });
+    "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-maxrate", "30M", "-bufsize", "60M", "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart", mp4], { stdio: "inherit" });
   console.log("wrote", path.relative(ROOT, mp4));
   fs.rmSync(tmp, { recursive: true, force: true });
 }

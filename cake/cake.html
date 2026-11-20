@@ -607,7 +607,7 @@ function renderLook() {
 }
 
 // ---- film look: animated grain + soft vignette, drawn over every frame
-const GRAIN = { amount: 0.3, size: 2, tiles: 12 };   // amount 0 turns it off
+const GRAIN = { amount: 0, size: 2, tiles: 12 };     // amount 0 turns it off (e.g. 0.3 for a grainy film look)
 const grainTiles = (() => {
   let seed = 99; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const w = Math.ceil(W / GRAIN.size), h = Math.ceil(H / GRAIN.size), tiles = [];
@@ -623,13 +623,13 @@ const grainTiles = (() => {
   return tiles;
 })();
 function filmLook(frame) {
-  if (GRAIN.amount <= 0) return;
   ctx.save();
   // vignette
   const vg = ctx.createRadialGradient(W / 2, H * 0.48, H * 0.28, W / 2, H * 0.5, H * 0.78);
   vg.addColorStop(0, "rgba(0,12,45,0)"); vg.addColorStop(1, "rgba(0,12,45,0.42)");
   ctx.globalCompositeOperation = "multiply"; ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
   // grain: a new pattern every output frame, so it keeps boiling through the held poses
+  if (GRAIN.amount <= 0) { ctx.restore(); return; }
   ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = GRAIN.amount; ctx.imageSmoothingEnabled = false;
   const tile = grainTiles[(frame * 7) % GRAIN.tiles], ox = (frame * 37) % GRAIN.size, oy = (frame * 53) % GRAIN.size;
   ctx.drawImage(tile, -ox, -oy, tile.width * GRAIN.size, tile.height * GRAIN.size);
