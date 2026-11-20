@@ -53,7 +53,7 @@ The voiceover still says **səhiyyə işçiləri**, while the screen says **neft
 ## VTB cake logo (v3, Nov 19, 2026)
 A 9 s vertical film: a knife cuts a whole cake into the VTB logo. The logo's three bars are exactly one slanted slab with two strips taken out, so the cake starts as that slab. The knife makes four cuts, and the two cut strips lift and slide out like the cut-out slice in the reference, leaving the three bars. The background is the client gradient `#0755C2 → #67C6FF`. The cake has a white top, a navy base, sponge layers and a VTB-blue cream layer, with white piped rosettes, sprinkles and nine striped candles (three per bar).
 
-The camera stays in a tight close-up on the knife while it cuts (crops freely, low over the icing and candles). Once the last strip is out, it pulls back on a rising arc to a top-down view of the whole logo. There is no flat logo overlay.
+The camera stays in a tight close-up on the knife while it cuts (crops freely, low over the icing and candles). Once the last strip is out, it pulls back and orbits round as it rises, so the cake turns into alignment (a small overshoot, then it lands) and ends straight-on and level, like the flat logo. There is no flat logo overlay.
 
 **Stepped timing:** like the reference, motion is choppy on purpose. Poses update 12 times a second and are held for 2–3 frames of the 30 fps video, with no motion blur. `STEP` in `cake/cake.html` sets the rate; `?step=0` in the preview URL (or `STEP = 0`) gives smooth motion again.
 
