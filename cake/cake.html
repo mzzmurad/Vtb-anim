@@ -473,8 +473,42 @@ function setScene(t) {
 // ---------------------------------------------------------------- frame
 const out = document.getElementById("c");
 const ctx = out.getContext("2d");
+// ---- film look: animated grain + soft vignette, drawn over every frame
+const GRAIN = { amount: 0.3, size: 2, tiles: 12 };   // amount 0 turns it off
+const grainTiles = (() => {
+  let seed = 99; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const w = Math.ceil(W / GRAIN.size), h = Math.ceil(H / GRAIN.size), tiles = [];
+  for (let n = 0; n < GRAIN.tiles; n++) {
+    const cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+    const g = cv.getContext("2d"), img = g.createImageData(w, h), d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = 128 + ((rnd() + rnd() + rnd()) / 3 - 0.5) * 2 * 150;   // soft bell curve around mid grey
+      d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+    }
+    g.putImageData(img, 0, 0); tiles.push(cv);
+  }
+  return tiles;
+})();
+function filmLook(frame) {
+  if (GRAIN.amount <= 0) return;
+  ctx.save();
+  // vignette
+  const vg = ctx.createRadialGradient(W / 2, H * 0.48, H * 0.28, W / 2, H * 0.5, H * 0.78);
+  vg.addColorStop(0, "rgba(0,12,45,0)"); vg.addColorStop(1, "rgba(0,12,45,0.42)");
+  ctx.globalCompositeOperation = "multiply"; ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  // grain: a new pattern every output frame, so it keeps boiling through the held poses
+  ctx.globalCompositeOperation = "overlay"; ctx.globalAlpha = GRAIN.amount; ctx.imageSmoothingEnabled = false;
+  const tile = grainTiles[(frame * 7) % GRAIN.tiles], ox = (frame * 37) % GRAIN.size, oy = (frame * 53) % GRAIN.size;
+  ctx.drawImage(tile, -ox, -oy, tile.width * GRAIN.size, tile.height * GRAIN.size);
+  // overlay leaves pure white untouched, so lay a faint straight pass on top to speckle the icing too
+  ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = GRAIN.amount * 0.28;
+  ctx.drawImage(tile, -ox, -oy, tile.width * GRAIN.size, tile.height * GRAIN.size);
+  ctx.restore();
+}
+
 function renderFrame(f, sub = 1) {
   const shutter = 0.5; // 180°
+  const outFrame = Math.round(f);
   if (STEP > 0) { f = Math.floor(f / FPS * STEP + 1e-6) / STEP * FPS; sub = 1; }
   for (let s = 0; s < sub; s++) {
     const tf = sub === 1 ? f : f + ((s + 0.5) / sub - 0.5) * shutter;
@@ -484,6 +518,7 @@ function renderFrame(f, sub = 1) {
     ctx.drawImage(renderer.domElement, 0, 0);
   }
   ctx.globalAlpha = 1;
+  filmLook(outFrame);
 }
 
 window.FILM = { FRAMES, FPS, renderFrame };
