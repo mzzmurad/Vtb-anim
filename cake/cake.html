@@ -659,7 +659,98 @@ let lastPose = null;
 const poseCache = document.createElement("canvas"); poseCache.width = W; poseCache.height = H;
 const poseCtx = poseCache.getContext("2d");
 
-window.FILM = { FRAMES, FPS, renderFrame };
+// ---------------------------------------------------------------- export (for Cinema 4D via glTF → FBX / Alembic)
+// Bakes every frame of the film into a glTF: camera, knife, strips, cut lines, flames, and the bodies that
+// switch on and off (as scale 0 / 1, stepped). Fur shells are left out (they are a shader trick), instanced
+// rosettes and sprinkles are merged into plain meshes, and the shadow-only floor becomes a plain floor.
+// mode "stepped" keeps the 12-poses-a-second timing of the video; "smooth" samples every frame.
+async function exportScene(mode = "stepped") {
+  const { GLTFExporter } = await import("three/addons/exporters/GLTFExporter.js");
+  // names (track targets must be unique)
+  scene.name = "VTB_cake_logo"; cake.name = "Cake"; knife.name = "Knife"; camera.name = "Camera";
+  sun.name = "Key_light"; rim.name = "Rim_light"; fill.name = "Fill_light"; ground.name = "Floor";
+  WHOLE.name = "Body_whole_cake"; LOWER.name = "Body_lower_after_cut_1_2";
+  for (const k of ORDER) { P[k].grp.name = "Piece_" + k; P[k].body.name = "Body_" + k; }
+  CUTS.forEach((c, i) => c.m.name = "Cut_line_" + (i + 1));
+  flames.forEach((f, i) => f.flame.name = "Flame_" + (i + 1));
+  let n = 0; scene.traverse(o => { if (!o.name) o.name = (o.isMesh ? "Mesh_" : o.isLight ? "Light_" : "Group_") + (n++); });
+  // strip the render-only bits
+  for (const m of furShellMeshes) m.parent && m.parent.remove(m);
+  ground.material = new THREE.MeshStandardMaterial({ color: C.bgBottom, roughness: 1, name: "Floor_shadow_catcher" });
+  const flameMat2 = new THREE.MeshStandardMaterial({ color: "#ffb21f", emissive: "#ffb21f", emissiveIntensity: 4, name: "Flame" });
+  const coreMat2 = new THREE.MeshStandardMaterial({ color: "#fff6c8", emissive: "#fff6c8", emissiveIntensity: 6, name: "Flame_core" });
+  scene.traverse(o => { if (o.material === flameMat) o.material = flameMat2; if (o.material === coreMat) o.material = coreMat2; });
+  // instanced → merged meshes
+  const inst = []; scene.traverse(o => { if (o.isInstancedMesh) inst.push(o); });
+  // sprinkles are split by colour (one mesh + material per colour), so no vertex colours are needed
+  const sprinkleMats = new Map();
+  for (const im of inst) {
+    const src = im.geometry.index ? im.geometry.toNonIndexed() : im.geometry;
+    const m4 = new THREE.Matrix4(), nm = new THREE.Matrix3(), c = new THREE.Color();
+    const P0 = src.attributes.position, N0 = src.attributes.normal, v = new THREE.Vector3();
+    const buckets = new Map();   // colour hex (or "" for rosettes) → { pos, nor }
+    for (let i = 0; i < im.count; i++) {
+      im.getMatrixAt(i, m4); nm.getNormalMatrix(m4);
+      const key = im.instanceColor ? (im.getColorAt(i, c), c.getHexString(THREE.SRGBColorSpace)) : "";
+      if (!buckets.has(key)) buckets.set(key, { pos: [], nor: [] });
+      const b = buckets.get(key);
+      for (let j = 0; j < P0.count; j++) {
+        v.fromBufferAttribute(P0, j).applyMatrix4(m4); b.pos.push(v.x, v.y, v.z);
+        v.fromBufferAttribute(N0, j).applyMatrix3(nm).normalize(); b.nor.push(v.x, v.y, v.z);
+      }
+    }
+    const piece = im.parent.name.replace("Piece_", "");
+    for (const [key, b] of buckets) {
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(b.pos, 3));
+      g.setAttribute("normal", new THREE.Float32BufferAttribute(b.nor, 3));
+      let mat;
+      if (key) {
+        if (!sprinkleMats.has(key)) { const sm = im.material.clone(); sm.color.set("#" + key); sm.name = "Sprinkle_" + key; sprinkleMats.set(key, sm); }
+        mat = sprinkleMats.get(key);
+      } else { mat = im.material.clone(); mat.onBeforeCompile = () => {}; mat.name = "Piped_cream"; }
+      const mesh = new THREE.Mesh(g, mat); mesh.name = key ? `Sprinkles_${piece}_${key}` : `Rosettes_${piece}`;
+      im.parent.add(mesh);
+    }
+    im.parent.remove(im);
+  }
+  // material names
+  const MN = new Map([[mats.icing, "Icing_white"], [mats.sponge, "Sponge"], [mats.rosette, "Piped_cream"], [mats.navy, "Cream_navy"], [mats.blue, "Cream_blue"]]);
+  scene.traverse(o => { if (o.isMesh && MN.has(o.material)) o.material.name = MN.get(o.material); });
+  scene.add(camera);
+  // bake
+  const animated = [knife, camera, WHOLE, LOWER, ...ORDER.map(k => P[k].body), P.stripA.grp, P.stripB.grp, ...CUTS.map(c => c.m), ...flames.map(f => f.flame)];
+  const onoff = new Set([WHOLE, LOWER, ...ORDER.map(k => P[k].body), P.stripA.grp, P.stripB.grp]);
+  const rec = new Map(animated.map(o => [o, { p: [], q: [], s: [] }]));
+  const times = [], fovs = [], focus = [];
+  for (let f = 0; f < FRAMES; f++) {
+    const fq = mode === "stepped" && STEP > 0 ? Math.floor(f / FPS * STEP + 1e-6) / STEP * FPS : f;
+    setScene(fq / FPS);
+    times.push(f / FPS); fovs.push(camera.fov); focus.push(LOOK.focus);
+    for (const o of animated) {
+      const r = rec.get(o);
+      r.p.push(...o.position.toArray()); r.q.push(...o.quaternion.toArray());
+      const sc = o.visible ? o.scale : new THREE.Vector3(0, 0, 0);
+      r.s.push(sc.x, sc.y, sc.z);
+    }
+  }
+  const tracks = [];
+  for (const [o, r] of rec) {
+    tracks.push(new THREE.VectorKeyframeTrack(o.name + ".position", times, r.p));
+    tracks.push(new THREE.QuaternionKeyframeTrack(o.name + ".quaternion", times, r.q));
+    const st = new THREE.VectorKeyframeTrack(o.name + ".scale", times, r.s);
+    if (onoff.has(o)) st.setInterpolation(THREE.InterpolateDiscrete);
+    tracks.push(st);
+  }
+  const clip = new THREE.AnimationClip("VTB_cake_" + mode, FRAMES / FPS, tracks);
+  setScene(0);
+  const glb = await new GLTFExporter().parseAsync(scene, { binary: true, animations: [clip], onlyVisible: false, maxTextureSize: 1024 });
+  let bin = ""; const u8 = new Uint8Array(glb);
+  for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return { glb: btoa(bin), fovs, focus, fps: FPS, frames: FRAMES, width: W, height: H };
+}
+
+window.FILM = { FRAMES, FPS, renderFrame, exportScene };
 window.filmReady = true;
 
 if (!RENDER) {

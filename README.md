@@ -77,3 +77,7 @@ The camera stays in a tight close-up on the knife while it cuts (crops freely, l
 
 - `cake/cake.html`: the scene (three.js). Open it over http to play it, or use `?f=90` for one frame. Colours are in `C`, candles in the `addCandle` list, cut timing in `LOWER_T`, `CUT_T`, `LIFT_T` and `HOP_T`, the close-up framing in `CLOSE_OFF` and the end shot in `WIDE`.
 - `node cake/render.mjs` writes `out/vtb-cake-logo-1080x1920-30fps.mp4` (no audio).
+
+### Scene files for Cinema 4D (`out/cinema4d/`)
+`node cake/export.mjs <python-with-bpy>` bakes the scene and its animation out of `cake/cake.html` into glTF. `cake/c4d_export.py` (run with Blender's Python module, `pip install bpy`) then writes the FBX, Alembic and .blend versions. FBX `_stepped` matches the video and `_smooth` moves on every frame. `out/cinema4d/README.txt` covers importing into Cinema 4D and what to rebuild there (fur, depth of field, glow, background gradient, shadow catcher). Cinema 4D's own `.c4d` format can't be written outside Cinema 4D.
+
