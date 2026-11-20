@@ -40,7 +40,7 @@ const C = {
   icing: "#FFFFFF",
   navy: "#04378F",
   blue: "#00AEEF",
-  sponge: "#F2C744",
+  sponge: "#FFDB6A",
   rosette: "#FFFFFF",
   cut: "#8aa3c2",
 };
@@ -70,16 +70,20 @@ scene.environmentIntensity = 0.45;
 
 const camera = new THREE.PerspectiveCamera(30, W / H, 0.05, 200);
 
-scene.add(new THREE.HemisphereLight("#ffffff", "#7fb4e6", 1.2));
-const sun = new THREE.DirectionalLight("#fffaf0", 2.2);
+scene.add(new THREE.HemisphereLight("#f4f8ff", "#5f95d8", 0.95));
+const sun = new THREE.DirectionalLight("#ffe2b8", 2.5);       // warm key
 sun.position.set(-8, 8, -7);
 sun.castShadow = true;
-sun.shadow.mapSize.set(4096, 4096);
+sun.shadow.mapSize.set(2048, 2048);
 Object.assign(sun.shadow.camera, { left: -11, right: 11, top: 11, bottom: -11, near: 1, far: 40 });
 sun.shadow.bias = -0.0004;
 sun.shadow.normalBias = 0.02;
-sun.shadow.radius = 3;
+sun.shadow.radius = 7;
 scene.add(sun, sun.target);
+const rim = new THREE.DirectionalLight("#bfe2ff", 1.6);       // cool rim from behind
+rim.position.set(5, 5, -10); scene.add(rim);
+const fill = new THREE.DirectionalLight("#ffd6ad", 0.45);     // soft warm fill from the front
+fill.position.set(7, 3, 9); scene.add(fill);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.ShadowMaterial({ color: C.shadow, opacity: 0.38 }));
 ground.rotation.x = -Math.PI / 2;
@@ -138,12 +142,54 @@ function spongeTexture() {
   return t;
 }
 const SPONGE_TEX = spongeTexture();
+
+// Fur / felt: each furry mesh gets N copies pushed out along its normals; each copy keeps only the
+// cross-sections of thin strands (a 3-D grid of cells, one strand per cell, random length, tapering).
+// Darker at the root, lighter at the tips — the plush look of the reference.
+const FUR = {
+  icing:   { shells: 12, len: 0.075, dens: 95 },
+  sponge:  { shells: 10, len: 0.055, dens: 110 },
+  cream:   { shells: 8,  len: 0.04,  dens: 130 },
+  rosette: { shells: 8,  len: 0.04,  dens: 150 },
+};
+const furShellMeshes = [];   // hidden for the depth pass
+function patchFur(mat, shell, o) {
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uShell = { value: shell }; sh.uniforms.uLen = { value: o.len }; sh.uniforms.uDens = { value: o.dens };
+    sh.vertexShader = "uniform float uShell; uniform float uLen; varying vec3 vFurPos;\n" + sh.vertexShader.replace("#include <begin_vertex>",
+      "#include <begin_vertex>\n vFurPos = position; transformed += (normalize(objectNormal) + vec3(0.55, 0.0, 0.35) * uShell) * uShell * uLen;");
+    sh.fragmentShader = "uniform float uShell; uniform float uDens; varying vec3 vFurPos;\n" +
+      "float furH(vec3 p){ p = fract(p * 0.1031); p += dot(p, p.yzx + 33.33); return fract((p.x + p.y) * p.z); }\n" +
+      sh.fragmentShader.replace("void main() {",
+        "void main() {\n if (uShell > 0.0) { vec3 q = vFurPos * uDens; vec3 f = fract(q) - 0.5; float r = furH(floor(q));" +
+        " float L = 0.4 + 0.6 * r; if (uShell > L) discard; if (length(f) > 0.6 * (1.0 - uShell / L) + 0.07) discard; }")
+      .replace("#include <color_fragment>", "#include <color_fragment>\n diffuseColor.rgb *= mix(0.38, 1.12, uShell) * (0.9 + 0.2 * furH(floor(vFurPos * uDens) + 7.0));");
+  };
+  mat.customProgramCacheKey = () => "fur";
+}
+const furCache = new Map();
+function furMats(base, o) {
+  if (!furCache.has(base)) {
+    patchFur(base, 0, o);
+    furCache.set(base, Array.from({ length: o.shells }, (_, i) => { const m = base.clone(); patchFur(m, (i + 1) / o.shells, o); return m; }));
+  }
+  return furCache.get(base);
+}
+function addFur(mesh, o) {
+  for (const m of furMats(mesh.material, o)) {
+    let sh;
+    if (mesh.isInstancedMesh) { sh = new THREE.InstancedMesh(mesh.geometry, m, mesh.count); sh.instanceMatrix = mesh.instanceMatrix; }
+    else sh = new THREE.Mesh(mesh.geometry, m);
+    sh.receiveShadow = true; sh.castShadow = false;
+    mesh.add(sh); furShellMeshes.push(sh);
+  }
+}
 const mats = {
-  icing: new THREE.MeshStandardMaterial({ color: C.icing, roughness: 0.5 }),
+  icing: new THREE.MeshStandardMaterial({ color: C.icing, roughness: 0.85 }),
   sponge: new THREE.MeshStandardMaterial({ color: "#ffffff", map: SPONGE_TEX, roughness: 0.95, bumpMap: SPONGE_TEX, bumpScale: 1.5 }),
-  rosette: new THREE.MeshStandardMaterial({ color: C.rosette, roughness: 0.42 }),
-  navy: new THREE.MeshStandardMaterial({ color: C.navy, roughness: 0.5 }),
-  blue: new THREE.MeshStandardMaterial({ color: C.blue, roughness: 0.45 }),
+  rosette: new THREE.MeshStandardMaterial({ color: C.rosette, roughness: 0.8 }),
+  navy: new THREE.MeshStandardMaterial({ color: C.navy, roughness: 0.8 }),
+  blue: new THREE.MeshStandardMaterial({ color: C.blue, roughness: 0.8 }),
 };
 const layerMat = (col, kind) => kind === "sponge" ? mats.sponge : col === C.navy ? mats.navy : mats.blue;
 
@@ -159,6 +205,7 @@ function makeBody(y0, y1) {
     geo.rotateX(-Math.PI / 2); geo.translate(0, y, 0);
     const m = new THREE.Mesh(geo, kind === "icing" ? mats.icing : layerMat(col, kind));
     m.castShadow = m.receiveShadow = true; g.add(m); y += h;
+    addFur(m, kind === "icing" ? FUR.icing : kind === "sponge" ? FUR.sponge : FUR.cream);
   }
   return g;
 }
@@ -166,7 +213,7 @@ function makeBody(y0, y1) {
 function rosetteGeometry() {
   const prof = [[0, 0], [0.125, 0], [0.13, 0.03], [0.115, 0.07], [0.085, 0.12], [0.05, 0.17], [0.018, 0.215], [0, 0.23]]
     .map(([r, y]) => new THREE.Vector2(r, y));
-  const geo = new THREE.LatheGeometry(prof, 64);
+  const geo = new THREE.LatheGeometry(prof, 40);
   const p = geo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
@@ -227,6 +274,7 @@ const bandOf = y => ORDER.find(k => y >= BAND[k][0] - 1e-6 && y < BAND[k][1]) ||
     });
     inst.castShadow = inst.receiveShadow = true;
     P[k].grp.add(inst);
+    addFur(inst, FUR.rosette);
   }
 }
 
@@ -240,11 +288,11 @@ for (const k of ORDER) {
     const px = XL(py) + 25 + rnd() * (XR(py) - XL(py) - 50);
     list.push([...toW([px, py]), rnd(), Math.floor(rnd() * SPRINKLE_COLS.length)]);
   }
-  const inst = new THREE.InstancedMesh(SPRINKLE, new THREE.MeshStandardMaterial({ roughness: 0.35 }), list.length);
+  const inst = new THREE.InstancedMesh(SPRINKLE, new THREE.MeshPhysicalMaterial({ roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.06 }), list.length);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
   list.forEach(([x, z, r1, ci], i) => {
     e.set(Math.PI / 2, 0, r1 * 6.28); q.setFromEuler(e);
-    m.compose(new THREE.Vector3(x, TOP_Y + 0.012, z), q, new THREE.Vector3(1, 1, 1));
+    m.compose(new THREE.Vector3(x, TOP_Y + 0.055, z), q, new THREE.Vector3(1.15, 1.15, 1.15));   // resting on the fur
     inst.setMatrixAt(i, m); inst.setColorAt(i, SPRINKLE_COLS[ci]);
   });
   inst.castShadow = true;
@@ -266,11 +314,13 @@ function stripeTexture(col) {
   return tex;
 }
 const wickMat = new THREE.MeshStandardMaterial({ color: "#3a2a1a" });
-const flameMat = new THREE.MeshBasicMaterial({ color: "#ffb21f" }), coreMat = new THREE.MeshBasicMaterial({ color: "#fff6c8" });
+// flames are brighter than white (HDR) so the bloom pass makes them glow
+const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setRGB(5.0, 2.3, 0.45, THREE.LinearSRGBColorSpace) });
+const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color().setRGB(7.0, 6.0, 3.6, THREE.LinearSRGBColorSpace) });
 function addCandle(piece, px, py, col, CH, phase) {
   const CR = 0.062;
   const candle = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(CR, CR, CH, 40), new THREE.MeshStandardMaterial({ map: stripeTexture(col), roughness: 0.38 }));
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(CR, CR, CH, 40), new THREE.MeshPhysicalMaterial({ map: stripeTexture(col), roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08 }));
   body.position.y = CH / 2; body.rotation.y = phase * 6.28; body.castShadow = true; candle.add(body);
   const wick = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.07, 8), wickMat);
   wick.position.y = CH + 0.035; candle.add(wick);
@@ -303,7 +353,7 @@ const knife = new THREE.Group();
   s.quadraticCurveTo(1.2, BLADE_H * 0.98, 0, BLADE_H * 0.62);
   const geo = new THREE.ExtrudeGeometry(s, { depth: 0.022, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2, curveSegments: 16 });
   geo.translate(0, 0, -0.011);
-  const blade = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#ffffff", metalness: 0.35, roughness: 0.22 }));
+  const blade = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: "#ffffff", metalness: 0.9, roughness: 0.16, envMapIntensity: 1.8 }));
   blade.castShadow = true; knife.add(blade);
   const steel = new THREE.MeshStandardMaterial({ color: "#c9d2dc", metalness: 1, roughness: 0.25 });
   const bolster = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.34, 0.09), steel);
@@ -323,7 +373,7 @@ cake.add(knife);
 const cutMat = new THREE.MeshBasicMaterial({ color: C.cut });
 const CUTS = [126, 190, 316, 378].map(y => {
   const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.004, 0.016), cutMat);
-  m.position.set(0, TOP_Y + 0.002, toW([0, y])[1]);
+  m.position.set(0, TOP_Y + 0.05, toW([0, y])[1]);
   m.visible = false; cake.add(m);
   return { y, m };
 });
@@ -468,11 +518,94 @@ function setScene(t) {
   const s = shotAt(t);
   camera.position.copy(s.pos); camera.fov = s.fov; camera.updateProjectionMatrix();
   camera.lookAt(s.tgt);
+  LOOK.focus = camera.position.distanceTo(s.tgt);
+  LOOK.dofK = lerp(LOOK.dofClose, LOOK.dofWide, seg(t, T_OUT0(), T_OUT1(), ease.inOut));
 }
 
 // ---------------------------------------------------------------- frame
 const out = document.getElementById("c");
 const ctx = out.getContext("2d");
+// ---------------------------------------------------------------- post: depth of field + bloom
+// LOOK: dofClose / dofWide = blur strength in the close-ups / the end shot; maxCoc = largest blur radius (px)
+const LOOK = { dofClose: 40, dofWide: 5, maxCoc: 22, bloom: 0.9, bloomThreshold: 2.2, focus: 5, dofK: 26 };
+const rtColor = new THREE.WebGLRenderTarget(W, H, { samples: 4, type: THREE.HalfFloatType });
+const rtDepth = new THREE.WebGLRenderTarget(W, H);
+const BW = W / 4, BH = H / 4;
+const rtB1 = new THREE.WebGLRenderTarget(BW, BH, { type: THREE.HalfFloatType });
+const rtB2 = new THREE.WebGLRenderTarget(BW, BH, { type: THREE.HalfFloatType });
+const depthMat = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+const fsCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), fsScene = new THREE.Scene();
+const fsQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); fsScene.add(fsQuad);
+const VS = "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }";
+const brightMat = new THREE.ShaderMaterial({
+  uniforms: { tIn: { value: null }, uTexel: { value: new THREE.Vector2(1 / W, 1 / H) }, uThr: { value: LOOK.bloomThreshold } },
+  vertexShader: VS, depthTest: false, depthWrite: false,
+  fragmentShader: `uniform sampler2D tIn; uniform vec2 uTexel; uniform float uThr; varying vec2 vUv;
+    void main(){ vec3 c = vec3(0.0);
+      for (int i = 0; i < 4; i++) { vec2 o = vec2(float(i - (i / 2) * 2) - 0.5, float(i / 2) - 0.5) * 2.0 * uTexel; c += texture2D(tIn, vUv + o).rgb; }
+      c *= 0.25; float l = max(c.r, max(c.g, c.b));
+      gl_FragColor = vec4(c * smoothstep(uThr, uThr * 1.8, l), 1.0); }`,
+});
+const blurMat = new THREE.ShaderMaterial({
+  uniforms: { tIn: { value: null }, uDir: { value: new THREE.Vector2() } },
+  vertexShader: VS, depthTest: false, depthWrite: false,
+  fragmentShader: `uniform sampler2D tIn; uniform vec2 uDir; varying vec2 vUv;
+    void main(){ float w[5]; w[0] = 0.227; w[1] = 0.1945; w[2] = 0.1216; w[3] = 0.054; w[4] = 0.0162;
+      vec3 c = texture2D(tIn, vUv).rgb * w[0];
+      for (int i = 1; i < 5; i++) { c += texture2D(tIn, vUv + uDir * float(i)).rgb * w[i]; c += texture2D(tIn, vUv - uDir * float(i)).rgb * w[i]; }
+      gl_FragColor = vec4(c, 1.0); }`,
+});
+const finalMat = new THREE.ShaderMaterial({
+  uniforms: {
+    tColor: { value: rtColor.texture }, tDepth: { value: rtDepth.texture }, tBloom: { value: rtB1.texture },
+    uNear: { value: 0.05 }, uFar: { value: 200 }, uFocus: { value: 5 }, uK: { value: 26 }, uMaxCoc: { value: LOOK.maxCoc },
+    uTexel: { value: new THREE.Vector2(1 / W, 1 / H) }, uBloom: { value: LOOK.bloom },
+  },
+  vertexShader: VS, depthTest: false, depthWrite: false,
+  fragmentShader: `#include <packing>
+    uniform sampler2D tColor, tDepth, tBloom; uniform float uNear, uFar, uFocus, uK, uMaxCoc, uBloom; uniform vec2 uTexel; varying vec2 vUv;
+    float zAt(vec2 uv){ return -perspectiveDepthToViewZ(unpackRGBAToDepth(texture2D(tDepth, uv)), uNear, uFar); }
+    float cocAt(float z){ return clamp(abs(z - uFocus) / z * uK, 0.0, uMaxCoc); }
+    void main(){
+      float z0 = zAt(vUv), c0 = cocAt(z0);
+      vec3 acc = texture2D(tColor, vUv).rgb; float ws = 1.0;
+      for (int i = 0; i < 40; i++) {                       // golden-angle disc
+        float r = sqrt((float(i) + 0.5) / 40.0) * uMaxCoc, a = float(i) * 2.39996;
+        vec2 uv = vUv + vec2(cos(a), sin(a)) * r * uTexel;
+        float zs = zAt(uv), cs = cocAt(zs);
+        float reach = zs > z0 ? min(cs, c0) : cs;          // things behind stay behind; things in front bleed over
+        float w = smoothstep(r - 1.0, r + 0.5, reach);
+        acc += texture2D(tColor, uv).rgb * w; ws += w;
+      }
+      vec3 col = acc / ws + texture2D(tBloom, vUv).rgb * uBloom;
+      gl_FragColor = vec4(col, 1.0);
+      #include <colorspace_fragment>
+    }`,
+});
+function pass(mat, target) { fsQuad.material = mat; renderer.setRenderTarget(target); renderer.render(fsScene, fsCam); }
+function renderLook() {
+  // 1. colour (HDR, MSAA)
+  renderer.shadowMap.autoUpdate = true;
+  renderer.setRenderTarget(rtColor); renderer.render(scene, camera);
+  // 2. depth (no fur shells, no background, reuse shadows)
+  renderer.shadowMap.autoUpdate = false;
+  const bg = scene.background; scene.background = null; scene.overrideMaterial = depthMat;
+  for (const m of furShellMeshes) m.visible = false;
+  renderer.setClearColor(0xffffff, 1); renderer.setRenderTarget(rtDepth); renderer.clear(); renderer.render(scene, camera);
+  for (const m of furShellMeshes) m.visible = true;
+  scene.overrideMaterial = null; scene.background = bg; renderer.setClearColor(0x000000, 0);
+  // 3. bloom: bright pass at quarter res, two widening blurs
+  brightMat.uniforms.tIn.value = rtColor.texture; pass(brightMat, rtB1);
+  for (const sc of [1, 2.5]) {
+    blurMat.uniforms.tIn.value = rtB1.texture; blurMat.uniforms.uDir.value.set(sc / BW, 0); pass(blurMat, rtB2);
+    blurMat.uniforms.tIn.value = rtB2.texture; blurMat.uniforms.uDir.value.set(0, sc / BH); pass(blurMat, rtB1);
+  }
+  // 4. depth of field + bloom → screen
+  Object.assign(finalMat.uniforms, {}); finalMat.uniforms.uFocus.value = LOOK.focus; finalMat.uniforms.uK.value = LOOK.dofK;
+  finalMat.uniforms.uNear.value = camera.near; finalMat.uniforms.uFar.value = camera.far;
+  pass(finalMat, null);
+}
+
 // ---- film look: animated grain + soft vignette, drawn over every frame
 const GRAIN = { amount: 0.3, size: 2, tiles: 12 };   // amount 0 turns it off
 const grainTiles = (() => {
@@ -510,16 +643,21 @@ function renderFrame(f, sub = 1) {
   const shutter = 0.5; // 180°
   const outFrame = Math.round(f);
   if (STEP > 0) { f = Math.floor(f / FPS * STEP + 1e-6) / STEP * FPS; sub = 1; }
+  if (STEP > 0 && f === lastPose) { ctx.drawImage(poseCache, 0, 0); filmLook(outFrame); return; }
   for (let s = 0; s < sub; s++) {
     const tf = sub === 1 ? f : f + ((s + 0.5) / sub - 0.5) * shutter;
     setScene(Math.max(0, tf) / FPS);
-    renderer.render(scene, camera);
+    renderLook();
     ctx.globalAlpha = 1 / (s + 1);
     ctx.drawImage(renderer.domElement, 0, 0);
   }
   ctx.globalAlpha = 1;
+  poseCtx.drawImage(out, 0, 0); lastPose = STEP > 0 ? f : null;
   filmLook(outFrame);
 }
+let lastPose = null;
+const poseCache = document.createElement("canvas"); poseCache.width = W; poseCache.height = H;
+const poseCtx = poseCache.getContext("2d");
 
 window.FILM = { FRAMES, FPS, renderFrame };
 window.filmReady = true;

@@ -55,6 +55,13 @@ A 9 s vertical film: a knife cuts a whole cake into the VTB logo. The logo's thr
 
 The camera stays in a tight close-up on the knife while it cuts (crops freely, low over the icing and candles). Once the last strip is out, it pulls back and orbits round as it rises, so the cake turns into alignment (a small overshoot, then it lands) and ends straight-on and level, like the flat logo. There is no flat logo overlay.
 
+**3D style (v7):** a soft, plush, felted look, after a fuzzy-wreath reference.
+- **Fur:** the icing, sponge, cream layers and piped rosettes grow short, combed fur made of stacked shell layers (`FUR` in `cake/cake.html` sets length, density and layer count per material). Each strand is darker at the root and its shade varies a little.
+- **Gloss:** sprinkles and candles are glossy clear-coated candy.
+- **Light:** a warm key, a cool rim light from behind and a soft warm front fill.
+- **Post:** a bloom pass makes the flames glow, and a depth-of-field pass keeps the knife's focus point sharp. Fore- and background blur strongly in the close-ups and only lightly in the end shot (`LOOK` sets the blur strength, maximum blur radius and bloom).
+- **Speed:** each held pose renders once and is reused for its 2–3 frames, so a full render takes about 25 minutes.
+
 **Film look:** an animated grain (new pattern every frame, so it boils through the held poses) and a soft navy vignette sit over every frame. `GRAIN.amount` in `cake/cake.html` sets the strength (0 turns it off) and `GRAIN.size` the grain size in pixels. The MP4 is encoded with `-tune grain` so the encoder keeps it.
 
 **Stepped timing:** like the reference, motion is choppy on purpose. Poses update 12 times a second and are held for 2–3 frames of the 30 fps video, with no motion blur. `STEP` in `cake/cake.html` sets the rate; `?step=0` in the preview URL (or `STEP = 0`) gives smooth motion again.
