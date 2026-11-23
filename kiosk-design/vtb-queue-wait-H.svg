@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" fill="none">
+<defs>
+<linearGradient id="bg-gradient" x1="100" y1="-100" x2="1100" y2="900" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0250BF"/><stop offset="0.55" stop-color="#1E7BE0"/><stop offset="1" stop-color="#67C6FF"/></linearGradient>
+<linearGradient id="mark-fill" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.06"/><stop offset="1" stop-color="#FFFFFF" stop-opacity="0.30"/></linearGradient>
+<filter id="card-shadow" x="-20%" y="-30%" width="140%" height="190%" filterUnits="objectBoundingBox" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+<feOffset dy="16"/><feGaussianBlur stdDeviation="22"/>
+<feColorMatrix type="matrix" values="0 0 0 0 0.008 0 0 0 0 0.118 0 0 0 0 0.353 0 0 0 0.30 0"/>
+<feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow" result="shape"/>
+</filter>
+<clipPath id="screen-clip"><rect width="1200" height="800"/></clipPath>
+</defs>
+<g id="VTB Queue - Wait screen (H)" clip-path="url(#screen-clip)">
+<g id="Background"><rect id="Gradient" width="1200" height="800" fill="url(#bg-gradient)"/><g id="Logo mark (background)" transform="translate(430 305) scale(1.122)"><polygon id="Bar 1" points="184,0 820,0 773,126 138,126" fill="url(#mark-fill)"/><polygon id="Bar 2" points="115,190 750,190 704,316 69,316" fill="url(#mark-fill)"/><polygon id="Bar 3" points="46,378 681,378 636,504 0,504" fill="url(#mark-fill)"/></g></g>
+<g id="Header"><rect id="Divider" x="0" y="87" width="1200" height="1" fill="#FFFFFF" fill-opacity="0.16"/><g id="Logo"><g id="Logo mark" transform="translate(48 32) scale(0.04756)"><polygon id="Bar 1" points="184,0 820,0 773,126 138,126" fill="#FFFFFF"/><polygon id="Bar 2" points="115,190 750,190 704,316 69,316" fill="#FFFFFF"/><polygon id="Bar 3" points="46,378 681,378 636,504 0,504" fill="#FFFFFF"/></g><text id="VTB" x="97" y="55.5" font-family="Inter, sans-serif" font-size="32" font-weight="800" letter-spacing="-0.5" fill="#FFFFFF">VTB</text></g><text id="Time" x="1152" y="52" text-anchor="end" font-family="Inter, sans-serif" font-size="22" font-weight="600" fill="#FFFFFF">10:40</text></g>
+<g id="Promo slot"><rect id="Promo placeholder (440x632)" x="48" y="120" width="440" height="632" rx="24" fill="#FFFFFF" fill-opacity="0.12" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1.5" stroke-dasharray="8 6"/><text id="Placeholder label" x="268" y="442" text-anchor="middle" font-family="Inter, sans-serif" font-size="18" font-weight="500" fill="#FFFFFF" fill-opacity="0.8">[Promo / reklam]</text></g>
+<g id="Queue board">
+<text id="Title" x="536" y="174" font-family="Inter, sans-serif" font-size="40" font-weight="700" letter-spacing="-0.8" fill="#FFFFFF">Elektron növbə</text>
+<g id="Column headers"><text id="Bilet" x="576" y="232" font-family="Inter, sans-serif" font-size="17" font-weight="500" fill="#FFFFFF" fill-opacity="0.75">Bilet</text><text id="Masa" x="1112" y="232" text-anchor="end" font-family="Inter, sans-serif" font-size="17" font-weight="500" fill="#FFFFFF" fill-opacity="0.75">Masa №</text><rect id="Divider" x="536" y="250" width="616" height="1" fill="#FFFFFF" fill-opacity="0.25"/></g>
+<g id="Row - now calling - P039"><rect id="Row background" x="536" y="270" width="616" height="120" rx="22" fill="#FFFFFF" filter="url(#card-shadow)"/>
+<text id="Ticket" x="576" y="356" font-family="Inter, sans-serif" font-size="72" font-weight="700" letter-spacing="-1" fill="#04378F">P039</text>
+<g id="Arrow" transform="translate(828 320)"><path d="M0 10H167" stroke="#00AEEF" stroke-width="3" stroke-linecap="round"/><path d="M159 3l9 7-9 7" stroke="#00AEEF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text id="Desk" x="1112" y="356" text-anchor="end" font-family="Inter, sans-serif" font-size="72" font-weight="700" fill="#04378F">2</text></g>
+<g id="Row - T006"><rect id="Row background" x="536" y="406" width="616" height="88" rx="20" fill="#FFFFFF" fill-opacity="0.14" stroke="#FFFFFF" stroke-opacity="0.22"/>
+<text id="Ticket" x="576" y="467" font-family="Inter, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">T006</text>
+<g id="Arrow" transform="translate(828 440)"><path d="M0 10H167" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.6"/><path d="M159 3l9 7-9 7" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.6"/></g>
+<text id="Desk" x="1112" y="467" text-anchor="end" font-family="Inter, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">1</text></g>
+<g id="Row - K112"><rect id="Row background" x="536" y="510" width="616" height="88" rx="20" fill="#FFFFFF" fill-opacity="0.14" stroke="#FFFFFF" stroke-opacity="0.22"/>
+<text id="Ticket" x="576" y="571" font-family="Inter, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">K112</text>
+<g id="Arrow" transform="translate(828 544)"><path d="M0 10H167" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.6"/><path d="M159 3l9 7-9 7" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.6"/></g>
+<text id="Desk" x="1112" y="571" text-anchor="end" font-family="Inter, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">4</text></g>
+<g id="Row - P038"><rect id="Row background" x="536" y="614" width="616" height="88" rx="20" fill="#FFFFFF" fill-opacity="0.14" stroke="#FFFFFF" stroke-opacity="0.22"/>
+<text id="Ticket" x="576" y="675" font-family="Inter, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">P038</text>
+<g id="Arrow" transform="translate(828 648)"><path d="M0 10H167" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-opacity="0.6"/><path d="M159 3l9 7-9 7" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.6"/></g>
+<text id="Desk" x="1112" y="675" text-anchor="end" font-family="Inter, sans-serif" font-size="48" font-weight="600" fill="#FFFFFF">3</text></g>
+<text id="Wait message" x="536" y="745" font-family="Inter, sans-serif" font-size="19" font-weight="400" fill="#FFFFFF" fill-opacity="0.85">Zəhmət olmasa, növbənizi gözləyin</text>
+</g></g></svg>

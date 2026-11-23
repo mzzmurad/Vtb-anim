@@ -12,3 +12,7 @@ Every element comes in as its own named layer:
 Text is set in Inter. Swap in VTB Group in Figma if it is installed.
 `assets/` holds the logo mark (#00AEEF, exact geometry) and each icon as a separate SVG.
 The slow bar motion on the published canvas isn't in the SVG. Recreate it in Figma with Smart Animate or in After Effects.
+
+# Queue wait screen (direction H)
+
+`vtb-queue-wait-H.svg` is the 1200×800 wait screen, also built for Figma import. Its layers: Background (gradient + logo mark bars), Header (logo, time), Promo slot (a 440×632 placeholder: drop your promo image in), and Queue board (title, column headers, one group per row with Row background, Ticket, Arrow and Desk). The top row is the "now calling" state: a white card with navy text. Waiting rows are translucent white.
