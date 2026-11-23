@@ -3,7 +3,7 @@ VTB cake logo: scene files for Cinema 4D
 
 One whole cake, a knife makes four cuts, two strips slide out and the three VTB bars remain;
 the camera follows the knife in close-up, then orbits up to the level logo.
-30 fps, frames 0-269 (9 s), 1080 x 1920 (9:16).
+30 fps, frames 0-419 (14 s; the logo holds from about 8.2 s to the end), 1080 x 1920 (9:16).
 
 Files
 -----
@@ -20,7 +20,7 @@ Opening in Cinema 4D
 1. Edit > Project Settings: set FPS to 30 before importing.
 2. File > Open (or Merge) vtb-cake-logo_stepped.fbx. In the FBX import options, turn on
    Cameras, Lights, Materials, Textures (embedded) and Animation / Tracks.
-3. Set the render output to 1080 x 1920, frames 0 to 269, and look through the "Camera" object.
+3. Set the render output to 1080 x 1920, frames 0 to 419, and look through the "Camera" object.
 
 How the animation is built
 --------------------------

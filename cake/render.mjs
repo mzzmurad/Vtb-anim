@@ -3,6 +3,8 @@
 //   node cake/render.mjs                → out/vtb-cake-logo-1080x1920-30fps.mp4
 //   node cake/render.mjs --frames 0,60  → just those frames as PNGs in out/check/
 //   node cake/render.mjs --sub 6        → sub-frames per frame for motion blur (default 4)
+//   node cake/render.mjs --from 270     → keep the first 270 frames of the existing MP4, render only the rest
+//                                          (use when only the end changed, e.g. a longer hold)
 import { createRequire } from "node:module";
 const { chromium } = createRequire(import.meta.url)("playwright");
 import http from "node:http";
@@ -45,14 +47,22 @@ if (arg("--frames")) {
   for (const f of arg("--frames").split(",").map(Number)) await grab(f, path.join(dir, `cake-f${String(f).padStart(3, "0")}.png`), 1);
 } else {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "vtb-cake-"));
-  for (let f = 0; f < FRAMES; f++) {
-    await grab(f, path.join(tmp, `f${String(f).padStart(4, "0")}.png`));
+  const from = +(arg("--from") || 0);
+  for (let f = from; f < FRAMES; f++) {
+    await grab(f, path.join(tmp, `f${String(f - from).padStart(4, "0")}.png`));
     if (f % 30 === 0) console.log(`frame ${f}/${FRAMES}`);
   }
   fs.mkdirSync(OUT, { recursive: true });
   const mp4 = path.join(OUT, "vtb-cake-logo-1080x1920-30fps.mp4");
-  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"),
-    "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-maxrate", "30M", "-bufsize", "60M", "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart", mp4], { stdio: "inherit" });
+  const enc = ["-c:v", "libx264", "-preset", "slow", "-crf", "16", "-maxrate", "30M", "-bufsize", "60M", "-pix_fmt", "yuv420p", "-profile:v", "high", "-movflags", "+faststart"];
+  if (from > 0) {
+    const head = path.join(tmp, "head.mp4"); fs.copyFileSync(mp4, head);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", head, "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"),
+      "-filter_complex", `[0:v]trim=end_frame=${from},setpts=PTS-STARTPTS,format=yuv420p[a];[1:v]format=yuv420p,setsar=1[b];[a][b]concat=n=2:v=1:a=0[v]`,
+      "-map", "[v]", "-r", String(FPS), ...enc, mp4], { stdio: "inherit" });
+  } else {
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(FPS), "-i", path.join(tmp, "f%04d.png"), ...enc, mp4], { stdio: "inherit" });
+  }
   console.log("wrote", path.relative(ROOT, mp4));
   fs.rmSync(tmp, { recursive: true, force: true });
 }

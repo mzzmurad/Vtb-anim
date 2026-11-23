@@ -51,7 +51,7 @@ The voiceover still says **səhiyyə işçiləri**, while the screen says **neft
 - **Audio**: replace with the licensed track and SFX.
 
 ## VTB cake logo (v3, Nov 19, 2026)
-A 9 s vertical film: a knife cuts a whole cake into the VTB logo. The logo's three bars are exactly one slanted slab with two strips taken out, so the cake starts as that slab. The knife makes four cuts, and the two cut strips lift and slide out like the cut-out slice in the reference, leaving the three bars. The background is the client gradient `#0755C2 → #67C6FF`. The cake has a white top, a navy base, sponge layers and a VTB-blue cream layer, with white piped rosettes, sprinkles and nine striped candles (three per bar).
+A 14 s vertical film (9 s of action, then the finished logo holds): a knife cuts a whole cake into the VTB logo. The logo's three bars are exactly one slanted slab with two strips taken out, so the cake starts as that slab. The knife makes four cuts, and the two cut strips lift and slide out like the cut-out slice in the reference, leaving the three bars. The background is the client gradient `#0755C2 → #67C6FF`. The cake has a white top, a navy base, sponge layers and a VTB-blue cream layer, with white piped rosettes, sprinkles and nine striped candles (three per bar).
 
 The camera stays in a tight close-up on the knife while it cuts (crops freely, low over the icing and candles). Once the last strip is out, it pulls back and orbits round as it rises, so the cake turns into alignment (a small overshoot, then it lands) and ends straight-on and level, like the flat logo. There is no flat logo overlay.
 
@@ -73,7 +73,8 @@ The camera stays in a tight close-up on the knife while it cuts (crops freely, l
 | 3.0–4.0 s | That strip lifts and slides out to the right while the knife crosses over |
 | 3.8–6.2 s | Cuts 3 and 4 along the second gap |
 | 6.2–7.2 s | The second strip slides out to the left; the knife leaves |
-| 6.4–8.2 s | The camera pulls out to the whole logo; hold to 9.0 s |
+| 6.4–8.2 s | The camera pulls out to the whole logo |
+| 8.2–14.0 s | The finished logo holds, level, with a slow push-in that eases to a stop |
 
 - `cake/cake.html`: the scene (three.js). Open it over http to play it, or use `?f=90` for one frame. Colours are in `C`, candles in the `addCandle` list, cut timing in `LOWER_T`, `CUT_T`, `LIFT_T` and `HOP_T`, the close-up framing in `CLOSE_OFF` and the end shot in `WIDE`.
 - `node cake/render.mjs` writes `out/vtb-cake-logo-1080x1920-30fps.mp4` (no audio).

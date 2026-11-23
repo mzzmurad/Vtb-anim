@@ -25,7 +25,7 @@ import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 // One whole cake → a knife makes four cuts → the two cut strips slide out → the three VTB bars remain.
 
 // ---------------------------------------------------------------- setup
-const W = 1080, H = 1920, FPS = 30, DUR = 9.0, FRAMES = Math.round(DUR * FPS);
+const W = 1080, H = 1920, FPS = 30, DUR = 14.0, FRAMES = Math.round(DUR * FPS);
 // Stepped, stop-motion timing like the reference: poses update STEP times a second and are held
 // (2–3 output frames each at 30 fps), with no motion blur. Set STEP = 0 for smooth motion.
 const STEP = +(params0().get("step") ?? 12);
@@ -456,6 +456,13 @@ function focusAt(t) {             // blade centre, averaged over ~1.2 s around t
   return V(Math.min(3.0, Math.max(-2.3, 0.85 * x / w)), TOP_Y * 0.75, z / w);
 }
 const T_OUT0 = () => T_SPLIT_B + 0.2, T_OUT1 = () => T_SPLIT_B + 2.0;
+// end hold: a slow push-in that eases to a stop, so the logo never grows out of frame on the long hold
+// (unchanged up to 9 s, then the rate decays: at most ~0.9° more)
+function pushIn(hold) {
+  const h0 = 9.0 - T_OUT1(), tau = 1.5;
+  return hold <= h0 ? hold * 0.6 : h0 * 0.6 + 0.6 * tau * (1 - Math.exp(-(hold - h0) / tau));
+}
+
 // spherical helpers (cake space): radius, elevation, azimuth around a target
 const toSph = v => ({ r: v.length(), el: Math.asin(v.y / v.length()), az: Math.atan2(v.x, v.z) });
 const fromSph = ({ r, el, az }) => V(r * Math.cos(el) * Math.sin(az), r * Math.sin(el), r * Math.cos(el) * Math.cos(az));
@@ -475,7 +482,7 @@ function shotAt(t) {
   const posL = tgtL.clone().add(fromSph(sph));
   // after landing, a slow push-in that keeps the logo level
   const hold = Math.max(0, t - T_OUT1());
-  return { pos: posL.applyMatrix4(ROT), tgt: tgtL.applyMatrix4(ROT), fov: lerp(CLOSE_FOV, WIDE.fov, k) - hold * 0.6 };
+  return { pos: posL.applyMatrix4(ROT), tgt: tgtL.applyMatrix4(ROT), fov: lerp(CLOSE_FOV, WIDE.fov, k) - pushIn(hold) };
 }
 
 // a cut strip lifts, then slides out along its length
