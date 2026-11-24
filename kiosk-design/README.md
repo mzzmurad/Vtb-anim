@@ -38,4 +38,4 @@ The promo image is cropped from the supplied screenshot (also in `assets/promo-p
 - `vtb-kiosk-qeydiyyat-redakte-navy.svg`: the sign-in form for editing a registration (phone, registration code, Növbəti)
 - `vtb-kiosk-yeni-qeydiyyat-navy.svg`: the new registration form (8 fields, Müraciəti göndər)
 
-Inputs are white fields with grey placeholder text. Dependent dropdowns (Xidmət, Tarix, Vaxt) are shown disabled in solid #B8C4D8. The primary button is VTB cyan #00AEEF with navy text, so it stands apart from the white inputs. The footer shows only Ana səhifə, because these screens are already inside Onlayn növbə.
+Inputs are white fields with grey placeholder text. Dependent dropdowns (Xidmət, Tarix, Vaxt) are shown disabled in solid #B8C4D8. The primary button keeps the original look: a rectangle shaped like the inputs, dark navy #0B2A6F, white label on the left and a white arrow on the right, with a 2 px white outline at 40% so it stays visible on the navy background. The footer shows only Ana səhifə, because these screens are already inside Onlayn növbə.
