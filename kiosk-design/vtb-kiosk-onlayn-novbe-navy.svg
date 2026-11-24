@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="1050" viewBox="0 0 1680 1050" fill="none">
+<defs><clipPath id="screen-clip"><rect width="1680" height="1050" /></clipPath><clipPath id="pattern-clip"><polygon points="1680,156.24 1680,1050 789.6,1050 1680,159.6" /></clipPath></defs>
+<g id="VTB Kiosk - Onlayn novbe (navy)" clip-path="url(#screen-clip)">
+<g id="Background"><rect id="Navy" x="0" y="156.24" width="1680" height="893.76" fill="#02387A" />
+<g id="Stripe pattern" clip-path="url(#pattern-clip)">
+<polygon id="Stripe 1" points="1669.92,164.64 1690.08,184.8 805.64,1050.92 803.8,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 2" points="1669.92,220.08 1690.08,240.24 861.08,1050.92 859.24,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 3" points="1669.92,275.52 1690.08,295.68 916.52,1050.92 914.68,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 4" points="1669.92,330.96 1690.08,351.12 971.96,1050.92 970.12,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 5" points="1669.92,386.4 1690.08,406.56 1027.4,1050.92 1025.56,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 6" points="1669.92,441.84 1690.08,462 1082.84,1050.92 1081,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 7" points="1669.92,497.28 1690.08,517.44 1138.28,1050.92 1136.44,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 8" points="1669.92,552.72 1690.08,572.88 1193.72,1050.92 1191.88,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 9" points="1669.92,608.16 1690.08,628.32 1249.16,1050.92 1247.32,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 10" points="1669.92,663.6 1690.08,683.76 1304.6,1050.92 1302.76,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 11" points="1669.92,719.04 1690.08,739.2 1360.04,1050.92 1358.2,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 12" points="1669.92,774.48 1690.08,794.64 1415.48,1050.92 1413.64,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 13" points="1669.92,829.92 1690.08,850.08 1470.92,1050.92 1469.08,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 14" points="1669.92,885.36 1690.08,905.52 1526.36,1050.92 1524.52,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 15" points="1669.92,940.8 1690.08,960.96 1581.8,1050.92 1579.96,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+<polygon id="Stripe 16" points="1669.92,996.24 1690.08,1016.4 1637.24,1050.92 1635.4,1049.08" fill="#FFFFFF" fill-opacity="0.28" />
+</g></g>
+<g id="Header"><rect id="Header background" width="1680" height="156.24" fill="#FFFFFF" />
+<g id="Logo"><g id="Logo mark" transform="translate(55.44 50.4) scale(0.06762)"><polygon id="Bar 1" points="184,0 820,0 773,126 138,126" fill="#00AEEF" /><polygon id="Bar 2" points="115,190 750,190 704,316 69,316" fill="#00AEEF" /><polygon id="Bar 3" points="46,378 681,378 636,504 0,504" fill="#00AEEF" /></g><text id="VTB" x="112.56" y="115.08" font-family="VTB Group, Inter, sans-serif" font-size="70.56" font-weight="800" letter-spacing="-2.52" fill="#0A3A7E">VTB</text></g>
+<g id="Language switch"><g id="AZ (active)"><rect id="Pill" x="704.76" y="73.92" width="72.24" height="55.44" rx="27.72" fill="#E6E9EE" /><text x="740.88" y="115.92" text-anchor="middle" font-family="VTB Group, Inter, sans-serif" font-size="42" font-weight="500" fill="#0A3A7E">AZ</text></g><text id="EN" x="841.68" y="115.92" text-anchor="middle" font-family="VTB Group, Inter, sans-serif" font-size="42" font-weight="500" fill="#0A3A7E">EN</text><text id="RU" x="943.32" y="115.92" text-anchor="middle" font-family="VTB Group, Inter, sans-serif" font-size="42" font-weight="500" fill="#0A3A7E">RU</text></g>
+<text id="Time" x="1623.72" y="115.92" text-anchor="end" font-family="VTB Group, Inter, sans-serif" font-size="42" font-weight="500" fill="#0A3A7E">12:54</text></g>
+<g id="Title row"><g id="Button - Back"><rect id="Button background" x="61.32" y="211.68" width="168" height="73.92" rx="36.96" fill="#FFFFFF" />
+<g id="Icon" transform="translate(125.16 228.48) scale(1.68000)" fill="none" stroke="#0A3A7E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" /></g>
+</g><text id="Title" x="262.92" y="267.12" font-family="VTB Group, Inter, sans-serif" font-size="52.08" font-weight="700" fill="#FFFFFF">Onlayn növbə</text></g>
+<g id="Service cards">
+<g id="Card - Yeni qeydiyyat"><rect id="Card background" x="61.32" y="352.8" width="672" height="157.08" rx="16.8" fill="#FFFFFF" />
+<rect id="Icon tile" x="86.52" y="394.8" width="79.8" height="73.92" rx="10.08" fill="#EAF0F8" />
+<g id="Icon" transform="translate(101.22 406.56) scale(2.10000)" fill="none" stroke="#0A3A7E" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></g>
+<text id="Label" x="206.64" y="440.16" font-family="VTB Group, Inter, sans-serif" font-size="28.56" font-weight="600" fill="#0A3A7E">Yeni qeydiyyat</text>
+<g id="Chevron" transform="translate(675.36 416.64) scale(1.26000)" fill="none" stroke="#0A3A7E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7" /></g>
+</g>
+<g id="Card - Qeydiyyatın redaktəsi"><rect id="Card background" x="766.92" y="352.8" width="672" height="157.08" rx="16.8" fill="#FFFFFF" />
+<rect id="Icon tile" x="792.12" y="394.8" width="79.8" height="73.92" rx="10.08" fill="#EAF0F8" />
+<g id="Icon" transform="translate(806.82 406.56) scale(2.10000)" fill="none" stroke="#0A3A7E" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-4-4L4 16z" /><path d="m13.5 6.5 4 4" /></g>
+<text id="Label" x="912.24" y="440.16" font-family="VTB Group, Inter, sans-serif" font-size="28.56" font-weight="600" fill="#0A3A7E">Qeydiyyatın redaktəsi</text>
+<g id="Chevron" transform="translate(1380.96 416.64) scale(1.26000)" fill="none" stroke="#0A3A7E" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7" /></g>
+</g>
+</g>
+<g id="Footer"><g id="Button - Ana sehife"><rect id="Button background" x="725.76" y="929.88" width="229.32" height="59.64" rx="25.2" fill="#FFFFFF" />
+<g id="Icon" transform="translate(767.76 941.64) scale(1.47000)" fill="none" stroke="#0A3A7E" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" /></g>
+<text id="Label" x="811.44" y="967.68" font-family="VTB Group, Inter, sans-serif" font-size="23.52" font-weight="500" fill="#0A3A7E">Ana səhifə</text></g></g>
+</g></svg>

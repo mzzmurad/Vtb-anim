@@ -31,3 +31,11 @@ The promo image is cropped from the supplied screenshot (also in `assets/promo-p
 
 `vtb-kiosk-kassa-navy.svg` (Kassa əməliyyatları › Valyuta mübadiləsi) and `vtb-kiosk-valyuta-navy.svg` (Valyuta mübadiləsi › Hesaba mədaxil) are 1680×1050 (the home screen scaled by 0.84, with true coordinates) and match the navy home screen. They add a Title row (Button - Back plus the page title). Both footer buttons are white because "Ana səhifə" is active on sub-screens. The "Hesaba mədaxil" card has no chevron because it is the last step.
 `vtb-kiosk-kommunal-navy.svg` (Kommunal ödənişlər › Plastik kartlar) and `vtb-kiosk-plastik-kartlar-navy.svg` (Plastik kartlar › Kartın alınması) use the same 1680×1050 template. "Kartın alınması" is the last step, so it has no chevron.
+
+# Online queue flow, navy version (1680×1050)
+
+- `vtb-kiosk-onlayn-novbe-navy.svg`: the Onlayn növbə menu, with Yeni qeydiyyat and Qeydiyyatın redaktəsi cards
+- `vtb-kiosk-qeydiyyat-redakte-navy.svg`: the sign-in form for editing a registration (phone, registration code, Növbəti)
+- `vtb-kiosk-yeni-qeydiyyat-navy.svg`: the new registration form (8 fields, Müraciəti göndər)
+
+Inputs are white fields with grey placeholder text. Dependent dropdowns (Xidmət, Tarix, Vaxt) are shown disabled in solid #B8C4D8. The primary button is VTB cyan #00AEEF with navy text, so it stands apart from the white inputs. The footer shows only Ana səhifə, because these screens are already inside Onlayn növbə.
