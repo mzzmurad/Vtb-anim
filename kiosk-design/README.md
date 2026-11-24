@@ -16,3 +16,8 @@ The slow bar motion on the published canvas isn't in the SVG. Recreate it in Fig
 # Queue wait screen (direction H)
 
 `vtb-queue-wait-H.svg` is the 1200×800 wait screen, also built for Figma import. Its layers: Background (gradient + logo mark bars), Header (logo, time), Promo slot (a 440×632 placeholder: drop your promo image in), and Queue board (title, column headers, one group per row with Row background, Ticket, Arrow and Desk). The top row is the "now calling" state: a white card with navy text. Waiting rows are translucent white.
+
+# Home screen, navy version
+
+`vtb-kiosk-home-navy.svg` is the 2000×1250 navy home screen (white header, navy body, diagonal stripe pattern), built for Figma import. Its layers: Background (navy fill, Stripe pattern › Stripe 1–16), Header (header background, logo, language switch, time), Greeting, Service cards (Card background, Icon tile, Icon, Label, Chevron), and Footer buttons.
+Text is set as "VTB Group" with an Inter fallback, so it switches automatically where VTB Group is installed. The stripes are white at 28% opacity, tapering from 34 px to 3 px.
