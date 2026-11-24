@@ -26,3 +26,7 @@ Text is set as "VTB Group" with an Inter fallback, so it switches automatically 
 
 `vtb-queue-wait-navy.svg` is the 1600×900 wait screen that matches the navy home screen, built for Figma import. Its layers: Background, Header (logo, time), Promo slot › Promo image, and Queue board (title, divider, column headers, a "now calling" row and a waiting row, each with Row background, Ticket, Arrow (Line + Head) and Desk, then the wait message).
 The promo image is cropped from the supplied screenshot (also in `assets/promo-placeholder.png`), so it is low resolution. Replace it with the original artwork in Figma.
+
+# Sub-screens, navy version
+
+`vtb-kiosk-kassa-navy.svg` (Kassa əməliyyatları › Valyuta mübadiləsi) and `vtb-kiosk-valyuta-navy.svg` (Valyuta mübadiləsi › Hesaba mədaxil) are 2000×1250 and match the navy home screen. They add a Title row (Button - Back plus the page title). Both footer buttons are white because "Ana səhifə" is active on sub-screens. The "Hesaba mədaxil" card has no chevron because it is the last step.
