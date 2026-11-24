@@ -29,4 +29,4 @@ The promo image is cropped from the supplied screenshot (also in `assets/promo-p
 
 # Sub-screens, navy version
 
-`vtb-kiosk-kassa-navy.svg` (Kassa əməliyyatları › Valyuta mübadiləsi) and `vtb-kiosk-valyuta-navy.svg` (Valyuta mübadiləsi › Hesaba mədaxil) are 2000×1250 and match the navy home screen. They add a Title row (Button - Back plus the page title). Both footer buttons are white because "Ana səhifə" is active on sub-screens. The "Hesaba mədaxil" card has no chevron because it is the last step.
+`vtb-kiosk-kassa-navy.svg` (Kassa əməliyyatları › Valyuta mübadiləsi) and `vtb-kiosk-valyuta-navy.svg` (Valyuta mübadiləsi › Hesaba mədaxil) are 1680×1050 (the home screen scaled by 0.84, with true coordinates) and match the navy home screen. They add a Title row (Button - Back plus the page title). Both footer buttons are white because "Ana səhifə" is active on sub-screens. The "Hesaba mədaxil" card has no chevron because it is the last step.
