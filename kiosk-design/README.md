@@ -39,3 +39,17 @@ The promo image is cropped from the supplied screenshot (also in `assets/promo-p
 - `vtb-kiosk-yeni-qeydiyyat-navy.svg`: the new registration form (8 fields, Müraciəti göndər)
 
 Inputs are white fields with grey placeholder text. Dependent dropdowns (Xidmət, Tarix, Vaxt) are shown disabled in solid #B8C4D8. The primary button keeps the original look: a rectangle shaped like the inputs, dark navy #0B2A6F, white label on the left and a white arrow on the right, with a 2 px white outline at 40% so it stays visible on the navy background. The footer shows only Ana səhifə, because these screens are already inside Onlayn növbə.
+
+# Service icons
+
+`vtb-kiosk-service-icons.svg` shows all seven icons on icon tiles, each in its own named group, ready to drag into Figma. `icons/` holds each icon as a separate 24×24 SVG: outline style, 1.5 px stroke, round caps and joins, navy #0A3A7E.
+
+| File | Card | Meaning |
+|---|---|---|
+| icon-valyuta-mubadilesi.svg | Valyuta Mübadiləsi | $ coin and ₼ coin with swap arrows |
+| icon-kredit-sifarisi.svg | Kredit Sifarişi | Hand receiving a ₼ coin |
+| icon-emanet.svg | Əmanət | Piggy bank with a coin going in |
+| icon-huquqi-sexs-ve-ferdi-sahibkar.svg | Hüquqi Şəxs və Fərdi Sahibkar | Office building next to a person |
+| icon-hesab-uzre-emeliyyatlar.svg | Hesab Üzrə Əməliyyatlar | Wallet with in and out arrows |
+| icon-kreditler-uzre-emeliyyatlar.svg | Kreditlər Üzrə Əməliyyatlar | Loan document with a % sign |
+| icon-plastik-kartlar.svg | Plastik Kartlar | Two stacked cards |
