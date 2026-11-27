@@ -42,7 +42,7 @@ Inputs are white fields with grey placeholder text. Dependent dropdowns (Xidmət
 
 # Service icons
 
-`vtb-kiosk-service-icons.svg` shows all eight icons on icon tiles, each in its own named group, ready to drag into Figma. `icons/` holds each icon as a separate 24×24 SVG: outline style, 1.5 px stroke, round caps and joins, navy #0A3A7E.
+`vtb-kiosk-service-icons.svg` shows all nine icons on icon tiles, each in its own named group, ready to drag into Figma. `icons/` holds each icon as a separate 24×24 SVG: outline style, 1.5 px stroke, round caps and joins, navy #0A3A7E.
 
 | File | Card | Meaning |
 |---|---|---|
@@ -54,3 +54,4 @@ Inputs are white fields with grey placeholder text. Dependent dropdowns (Xidmət
 | icon-kreditler-uzre-emeliyyatlar.svg | Kreditlər Üzrə Əməliyyatlar | Loan document with a % sign |
 | icon-plastik-kartlar.svg | Plastik Kartlar | Two stacked cards |
 | icon-onlayn-novbe.svg | Onlayn növbə button | Phone with a clock: booking a time online |
+| icon-ana-sehife.svg | Ana səhifə button | House with a door: back to the home screen |
